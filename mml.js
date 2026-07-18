@@ -1,4 +1,8 @@
 // MMLForge-8 / MMLPlayer — MML(Music Macro Language) パーサ + Web Audio シーケンサ（外部依存なし）
+// Copyright (c) 2026 Takeshi Maeda (SPSoft)
+// SPDX-License-Identifier: MIT
+// この1ファイルだけコピーして使う場合も、上記の著作権表示とMITライセンス全文を添えること。
+//
 // ブラウザに <script src="mml.js"> で読み込むだけで、グローバル MMLPlayer が使える。
 // 例: MMLPlayer.play(['t120 l8 cdefgab>c'], { loop: true });
 //     MMLPlayer.setTrackMute(0, true);   // 再生中のトラック0を即時ミュート（false で復帰）
