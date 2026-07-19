@@ -71,7 +71,7 @@ MMLForge-8 は、その打ち込み・試聴・自動作曲・ゲームへの組
 
 ## エンジンを自分のゲーム/アプリに組み込む
 
-`mml.js` 1ファイルをコピーして読み込むだけです（依存なし・約280行）。
+`mml.js` 1ファイルをコピーして読み込むだけです（依存なし・約390行）。
 
 ```html
 <script src="mml.js"></script>
@@ -118,14 +118,16 @@ MMLPlayer.play([`
 
 エディタで書いた曲を持ち出すときは、再生ボタンの隣の **「mml.js用にコピー」** を使ってください。
 コメントを除去し、継続行を連結して1行=1トラックに整形したものがコピーされるので、各行をそのまま
-`MMLPlayer.play()` の配列要素にできます。エディタの記法ごと使いたい場合は、`index.html` 内の
+`MMLPlayer.play()` の配列要素にできます。エディタの記法ごと使いたい場合は、`js/core.js` 内の
 `stripComments()` / `parseTrackBlocks()`（依存ゼロの純関数）も一緒にコピーしてください。
 
 なお `@e3,0,100,40` の数値とカンマの前後だけは**半角スペースしか読み飛ばしません**（改行やタブを挟むとエラー）。
 
-## 自動作曲エンジン（MMLComposer）
+## 自動作曲（内部エンジン MMLComposer）
 
-`mml-composer.js` を追加で読み込むと使えます（`harmonize` のみ `MMLPlayer.parse` に依存）。
+エディタの「ガチャ」「伴奏付け」「追い足し」の中身です。ツール内部のエンジンであり、他アプリ向けの
+切り出しは想定していません（切り出し前提で提供しているのはサウンドエンジン `mml.js` のみ）。以下は
+仕様の記録として残すAPIの形です（`harmonize` のみ `MMLPlayer.parse` に依存）。
 
 ```js
 // 生成: 雰囲気×小節数×シード → MMLトラック配列
@@ -164,7 +166,7 @@ const ext = MMLComposer.extendMelody('t90 l4 o4 c e g e | d f a2', { seed: 1 });
 
 アルゴリズムは定石ベースです: 雰囲気プリセット（スケール・テンポ帯・コード進行プール・音色）
 → コード進行を選択 → ベース=ルート、アルペジオ=分散和音、メロディ=強拍コードトーン＋弱拍スケール音
-（声部連結）、最終小節は主音終止。詳細は `mml-composer.js` のコメントを参照してください。
+（声部連結）、最終小節は主音終止。詳細は `js/mml-composer.js` のコメントを参照してください。
 
 ## 動作環境
 
@@ -178,8 +180,8 @@ const ext = MMLComposer.extendMelody('t90 l4 o4 c e g e | d f a2', { seed: 1 });
 
 外部ライブラリへの依存はありません。以下は本体に取り込んで利用している既存の成果です。
 
-- **mulberry32**（擬似乱数, `mml-composer.js`） — Tommy Ettinger 作の小型PRNG。パブリックドメイン（CC0）扱いのスニペットで、決定的な曲生成（同じシード+設定なら同じ曲）に使用しています。
-- **YIN法**（ピッチ解析, `mml-audio.js`） — de Cheveigné, A. & Kawahara, H. (2002) "YIN, a fundamental frequency estimator for speech and music" で発表された基本周波数推定アルゴリズムを、本プロジェクトで独自に実装したものです（音声→MML採譜に使用）。
+- **mulberry32**（擬似乱数, `js/mml-composer.js`） — Tommy Ettinger 作の小型PRNG。パブリックドメイン（CC0）扱いのスニペットで、決定的な曲生成（同じシード+設定なら同じ曲）に使用しています。
+- **YIN法**（ピッチ解析, `js/mml-audio.js`） — de Cheveigné, A. & Kawahara, H. (2002) "YIN, a fundamental frequency estimator for speech and music" で発表された基本周波数推定アルゴリズムを、本プロジェクトで独自に実装したものです（音声→MML採譜に使用）。
 
 ## ライセンス
 
