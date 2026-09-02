@@ -6,7 +6,7 @@ const { loadPlayer, loadCore, ok, eq, near } = require('./helper');
 const P = loadPlayer();
 global.MMLPlayer = P;
 const core = loadCore(P);
-const { stripComments, parseTrackBlocks, barCheck, ta } = core;
+const { stripComments, parseTrackBlocks, trackPos, locateError, barCheck, ta } = core;
 
 const check = (text, beats) => { ta.value = text; return barCheck(beats); };
 
@@ -93,6 +93,17 @@ module.exports = {
     const r = check('t120 l4 c d e f t120 g a b >c', 4);
     ok(!r.rows[0].multiTempo);
     eq(r.rows[0].bars, 2);
+  },
+  '最初の音符より後で初めて t が出るトラックは、それまで既定の t120 なので複数テンポ扱い'() {
+    // 前半は既定の120、後半は60。t60 だけ見て「1.5小節」と出すのは誤り
+    const r = check('l4 c d e f t60 g a b >c', 4);
+    eq(r.rows[0].multiTempo, [120, 60]);
+  },
+  '最初の音符より前なら t の位置は問わない'() {
+    const r = check('@e3,0,100,40 v10 t60 l4 c d e f', 4);
+    ok(!r.rows[0].multiTempo);
+    eq(r.rows[0].tempo, 60);
+    eq(r.rows[0].bars, 1);
   },
   '意図的に小節線をまたぐトラックは件数として報告される'() {
     // エコー用に頭を32分ずらし、末尾の音を同じだけ詰めて尺を合わせたトラック。

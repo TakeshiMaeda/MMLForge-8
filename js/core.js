@@ -108,11 +108,16 @@ function stripComments(text) {
   return out;
 }
 
-// テキストエリアをトラックブロックに分解する
+// テキストエリアをトラックブロックに分解する（トラック分割のルールはここだけが知っている）
 // ルール: 行頭から始まる行 = 新トラック。行頭が空白の行 = 前のトラックの継続。
 //         コメント（; 行末まで / ブロック /* */）は stripComments で空白化済みのため
 //         コメントだけの行や空行は透過（トラックを分断しない。トラック途中に挟める）
-// 戻り値: [{ mml: 連結済みMML, start, end }]（start/end = トラックに属する行番号の範囲）
+// 戻り値: [{ mml, start, end, lines, pieces }]
+//   mml    … 各行を trim して ' ' で連結した1トラック分のMML（mml.js にそのまま渡せる）
+//   start/end … トラックに属する行の範囲（0始まりの行インデックス）
+//   lines  … 属する行の一覧 [{ no: 1始まりの行番号, text: trim済み }]（空行・コメントのみの行は除く）
+//   pieces … mml の各行ぶんが原文のどこから来たか [{ from: mml内の開始位置, line: 0始まり行, col: 0始まり桁 }]
+//            （mml.js のエラー位置を原文の行・桁に戻すための対応表。trackPos が使う）
 function parseTrackBlocks(text) {
   const lines = stripComments(text).split('\n');
   const blocks = [];
@@ -120,15 +125,40 @@ function parseTrackBlocks(text) {
   lines.forEach((line, i) => {
     const t = line.trim();
     if (!t) return;
+    const col = line.length - line.trimStart().length;
     if (/^[ \t]/.test(line) && cur) {
+      cur.pieces.push({ from: cur.mml.length + 1, line: i, col });
       cur.mml += ' ' + t;
       cur.end = i;
+      cur.lines.push({ no: i + 1, text: t });
     } else {
-      cur = { mml: t, start: i, end: i };
+      cur = { mml: t, start: i, end: i, lines: [{ no: i + 1, text: t }], pieces: [{ from: 0, line: i, col }] };
       blocks.push(cur);
     }
   });
   return blocks;
+}
+
+// mml.js が返す位置（block.mml 内の1始まりの文字位置）を原文の { line, col }（どちらも1始まり）に戻す
+function trackPos(block, pos) {
+  const i = pos - 1;
+  let pc = block.pieces[0];
+  for (const p of block.pieces) { if (p.from <= i) pc = p; else break; }
+  return { line: pc.line + 1, col: pc.col + (i - pc.from) + 1 };
+}
+
+// mml.js のエラー「トラックN 位置M: 内容」を、エディタ上の行と文字位置「トラックN L行目 C文字目: 内容」に
+// 書き換える。位置情報の無いエラー（生成系のエラー等）はそのまま返す
+function locateError(e, blocks) {
+  const b = blocks[e.track];
+  if (!b || !(e.pos > 0)) return e.message;
+  const { line, col } = trackPos(b, e.pos);
+  return e.message.replace(/^トラック\d+ 位置\d+: /, `トラック${e.track + 1} ${line}行目 ${col}文字目: `);
+}
+
+// エラー欄に出す。MMLの記法エラーなら原文の行と文字位置に直す
+function showError(e) {
+  error.textContent = locateError(e, parseTrackBlocks(ta.value));
 }
 
 function tracks() {
@@ -151,7 +181,7 @@ function optTokenize(s, ranges) {
     const nums = (n, signed) => {
       for (let k = 0; k < n; k++) {
         while (i < to && s[i] === ' ') i++;
-        if (signed && i < to && s[i] === '-') i++;
+        if (signed && i < to && (s[i] === '-' || s[i] === '+')) i++;
         num();
         if (k < n - 1) { while (i < to && s[i] === ' ') i++; if (i < to && s[i] === ',') i++; }
       }
@@ -259,7 +289,7 @@ document.getElementById('play').addEventListener('click', () => {
     status.textContent = playStatusText(info);
   } catch (e) {
     status.textContent = '';
-    error.textContent = e.message;
+    showError(e);
   }
 });
 // [selFrom, selTo) を最適化した全文を返す（縮められなければ null）。
@@ -340,9 +370,9 @@ document.getElementById('optMml').addEventListener('click', () => {
   let selFrom = ta.selectionStart ?? 0, selTo = ta.selectionEnd ?? 0;
   if (selFrom === selTo) { selFrom = 0; selTo = text.length; }
   try {
-    tracks().forEach(m => MMLPlayer.parse(m));
+    tracks().forEach((m, i) => MMLPlayer.parse(m, i));
   } catch (e) {
-    error.textContent = '最適化の前にMMLのエラーを直してください — ' + e.message;
+    error.textContent = '最適化の前にMMLのエラーを直してください — ' + locateError(e, parseTrackBlocks(text));
     return;
   }
   let res;
@@ -369,28 +399,31 @@ document.getElementById('optMml').addEventListener('click', () => {
 // （1回だけ繰り返す＝中身そのまま）を仮に足して閉じる。こうすると [ ]0 で本体を丸ごと括った
 // 曲でも、中の行が全部スキップされずに位置を測れる。
 function barCheck(beatsPerBar) {
-  const lines = stripComments(ta.value).split('\n');
-  const trks = [];
-  let cur = null;
-  lines.forEach((line, i) => {
-    const t = line.trim();
-    if (!t) return;
-    if (/^[ \t]/.test(line) && cur) cur.lines.push({ no: i + 1, text: t });
-    else { cur = { lines: [{ no: i + 1, text: t }] }; trks.push(cur); }
-  });
+  const trks = parseTrackBlocks(ta.value);
   const whole = (x) => Math.abs(x - Math.round(x)) < 1e-6;
+  // 途中までのMMLを測る。リピートの途中なら開いたままの [ の数だけ ]1 を足して閉じる
+  const partial = (src) => {
+    let open = 0;
+    for (const c of src) { if (c === '[') open++; else if (c === ']') open--; }
+    return MMLPlayer.parse(src + ']1'.repeat(Math.max(0, open)));
+  };
   const rows = [];
   let dur0 = null, allSame = true;
 
   trks.forEach((tr, ti) => {
-    const mml = tr.lines.map(l => l.text).join(' ');
-    const p = MMLPlayer.parse(mml);
+    const mml = tr.mml;
+    const p = MMLPlayer.parse(mml, ti);
     if (dur0 === null) dur0 = p.duration;
     else if (Math.abs(p.duration - dur0) > 1e-6) allSame = false;
 
     // parse が返す tempo は「最後に設定された値」なので、途中でテンポが変わるトラックでは
-    // 小節長を1つに決められない。誤った数字を出すより判定不能と言うほうがいい
+    // 小節長を1つに決められない。誤った数字を出すより判定不能と言うほうがいい。
+    // 最初の t より前に音符・休符があれば、そこは既定の t120 で鳴っているので 120 も数える
     const tempos = [...new Set((mml.match(/t\d+/gi) || []).map(s => parseInt(s.slice(1), 10)))];
+    const firstT = mml.search(/t\d/i);
+    let headDur = 0;
+    try { headDur = partial(firstT < 0 ? mml : mml.slice(0, firstT)).duration; } catch (e) { /* 途中で切れて読めなければ 0 扱い */ }
+    if (headDur > 0 && !tempos.includes(120)) tempos.unshift(120);
     if (tempos.length > 1) {
       rows.push({ ch: ti + 1, notes: p.notes.length, sec: p.duration, multiTempo: tempos });
       return;
@@ -405,10 +438,8 @@ function barCheck(beatsPerBar) {
       l.text.split('|').forEach((part, pi, arr) => {
         acc += ' ' + part;
         if (!part.trim()) return;
-        let open = 0;
-        for (const c of acc) { if (c === '[') open++; else if (c === ']') open--; }
         let q;
-        try { q = MMLPlayer.parse(acc + ']1'.repeat(Math.max(0, open))); } catch (e) { return; }
+        try { q = partial(acc); } catch (e) { return; }
         const b = q.duration / barSec;
         if (!whole(b)) {
           strays++;
@@ -431,7 +462,7 @@ document.getElementById('checkBars').addEventListener('click', () => {
     r = barCheck(beats);
   } catch (e) {
     rep.textContent = '';
-    error.textContent = '小節チェックの前にMMLのエラーを直してください — ' + e.message;
+    error.textContent = '小節チェックの前にMMLのエラーを直してください — ' + locateError(e, parseTrackBlocks(ta.value));
     return;
   }
   if (!r.rows.length) { rep.textContent = ''; status.textContent = 'チェックするトラックがありません'; return; }

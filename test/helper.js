@@ -48,7 +48,7 @@ function loadCore(MMLPlayer) {
   const { document, localStorage, navigator } = dom;   // 直下の eval から見える必要がある
   void navigator;
   const api = eval(read('js/core.js')                  // eslint-disable-line no-eval
-    + ';({ stripComments, parseTrackBlocks, barCheck, optimizeMML, ta })');
+    + ';({ stripComments, parseTrackBlocks, trackPos, locateError, barCheck, optimizeMML, ta })');
   return { ...api, localStorage, document };
 }
 

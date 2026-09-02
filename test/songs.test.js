@@ -9,7 +9,7 @@ const { ROOT, loadPlayer, loadCore, ok, eq, near } = require('./helper');
 
 const P = loadPlayer();
 global.MMLPlayer = P;
-const { barCheck, ta } = loadCore(P);
+const { barCheck, parseTrackBlocks, ta } = loadCore(P);
 
 const song = (name) => fs.readFileSync(path.join(ROOT, 'songs', name), 'utf8');
 const check = (name, beats) => { ta.value = song(name); return barCheck(beats); };

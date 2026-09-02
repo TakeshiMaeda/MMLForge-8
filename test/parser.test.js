@@ -43,9 +43,9 @@ module.exports = {
   '| と空白と改行は無視される'() {
     eq(ev('c | d\n\te').evs.length, 3);
   },
-  'v は0-15に丸められる'() {
-    const r = ev('v99 c v0 c');
-    ok(r.evs[0].vol > r.evs[1].vol, 'v99 は v0 より大きい');
+  'v は 0-15 で、大きいほど音量が上がる'() {
+    const r = ev('v15 c v0 c');
+    ok(r.evs[0].vol > r.evs[1].vol, 'v15 は v0 より大きい');
   },
   'q はゲート（音の鳴る割合）'() {
     const r = ev('t120 q4 c4');
@@ -59,6 +59,16 @@ module.exports = {
   'リピートは入れ子にできる'() {
     eq(ev('[[cd]2 e]2').evs.length, 10);
   },
+  'リピートの周回ごとに状態は引き継がれる'() {
+    // 1周目 o4、2周目 o5（> が効いたまま次の周に入る）
+    eq(ev('o4 [c >]2').evs.map(e => e.midi), [60, 72]);
+  },
+  'リピートの中の & は周をまたいで繋がる'() {
+    // "c4&" を2回 = c4&c4& … 最後の & は次の音符が無いのでエラー。& の後に音符を置けば繋がる
+    const r = ev('t120 [c4&c4]2');
+    eq(r.evs.length, 2, '2周で2発音');
+    near(r.evs[0].dur, 1.0);
+  },
   '無限ループはループ開始点を返し、長さは変えない'() {
     const r = P.parse('t120 l4 c d [e f]0');
     near(r.duration, 2.0, '4分音符4つ ぶん');
@@ -66,6 +76,27 @@ module.exports = {
   },
   '無限ループを使わなければ loopStart は null'() {
     eq(P.parse('cde').loopStart, null);
+  },
+  '& の直後にループ開始点が来ても、2周目以降はループ頭の音を改めて鳴らす'() {
+    // 1周目: c4&d4 は1発音（c→d と滑らかに繋がる）。2周目以降は c4 が無いので d4 を頭から発音する
+    const r = ev('t120 o4 c4& [d4 e4]0');
+    const main = r.evs.filter(e => !e.loopOnly);
+    eq(main.map(e => e.segs.map(s => s.midi)), [[60, 62], [64]], '1周目は c&d と e の2発音');
+    near(r.loopStart, 0.5, 'ループ開始点は c4 の後');
+    const lo = r.evs.filter(e => e.loopOnly);
+    eq(lo.length, 1, '2周目以降専用の音が1つ足される');
+    eq(lo[0].midi, 62, 'それは d');
+    near(lo[0].time, 0.5, 'ループ開始点から');
+    near(lo[0].dur, 0.5, '繋いだ先の区間ぶん');
+    eq(lo[0].segs.map(s => s.midi), [62]);
+  },
+  '& でループ開始点をまたいだ音は parse() の notes には出ない（1周目の音だけ数える）'() {
+    const r = P.parse('t120 c4& [d4 e4]0');
+    eq(r.notes.map(n => n.midi), [60, 64]);
+    near(r.duration, 1.5);
+  },
+  'ループ開始点をまたぐ & が無ければ 2周目専用の音は作られない'() {
+    eq(ev('c4 [d4& e4]0').evs.filter(e => e.loopOnly).length, 0);
   },
 
   // ── & タイ/スラー ──
@@ -136,6 +167,10 @@ module.exports = {
   '@b は正のセント（上から入る）も読む'() {
     eq(ev('@b50,30 c').evs[0].bend.cent, 50);
   },
+  '@b は + 付きの正の値も読む（音符の + と同じ流儀）'() {
+    eq(ev('@b+200,60 c').evs[0].bend.cent, 200);
+    eq(ev('@b +200, 60 c').evs[0].bend.cent, 200, '空白を挟んでも同じ');
+  },
   '@b は1回限りで次の音符には効かない'() {
     eq(ev('@b-200,60 c d').evs[1].bend, null);
   },
@@ -152,8 +187,8 @@ module.exports = {
   },
 
   // ── 既存記法が壊れていないこと ──
-  '@e は4値を読み、sustain は0-100に丸める'() {
-    const e = ev('@e3,20,150,40 c').evs[0].env;
+  '@e は4値を読む'() {
+    const e = ev('@e3,20,100,40 c').evs[0].env;
     eq(e, { a: 3, d: 20, s: 100, r: 40 });
   },
   '既定のエンベロープは @e3,0,100,40'() {
