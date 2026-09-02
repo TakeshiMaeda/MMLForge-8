@@ -116,7 +116,12 @@ const MMLPlayer = (() => {
 
     const err = (msg, at = pos) => Object.assign(
       new Error(`トラック${ti + 1} 位置${at + 1}: ${msg}`), { track: ti, pos: at + 1 });
+    // 値の範囲エラーは「その値の先頭」を指したいので、読んだ数値の開始位置を覚えておく
+    // （数値が無かった場合は「数値があるべき場所」がそのまま入る）
+    let numAt = 0;      // 直近の readInt で読んだ値の開始位置
+    let numsAt = [];    // 直近の readNums で読んだ各値の開始位置
     const readInt = () => {
+      numAt = pos;
       let s = '';
       while (pos < src.length && /\d/.test(src[pos])) s += src[pos++];
       return s === '' ? null : parseInt(s, 10);
@@ -124,8 +129,10 @@ const MMLPlayer = (() => {
     // カンマ区切りの整数を n 個読む（値の前後の空白は許す）。signed=true なら先頭の - を符号と見る
     const readNums = (n, signed, label, needMsg) => {
       const out = [];
+      numsAt = [];
       for (let i = 0; i < n; i++) {
         while (pos < src.length && src[pos] === ' ') pos++;
+        numsAt.push(pos);
         let sign = 1;
         if (signed && (src[pos] === '-' || src[pos] === '+')) { sign = src[pos] === '-' ? -1 : 1; pos++; }
         const v = readInt();
@@ -154,7 +161,7 @@ const MMLPlayer = (() => {
     const readDuration = () => {
       const n = readInt();
       const base = n === null ? defLen : n;
-      if (base <= 0) throw err('音長は1以上で指定してください');
+      if (base <= 0) throw err('音長は1以上で指定してください', numAt);
       let beats = 4 / base;
       let add = beats;
       const dots = readDots();
@@ -257,7 +264,7 @@ const MMLPlayer = (() => {
       } else if (ch === 'o') {
         pos++;
         const n = readInt();
-        if (n === null || n > 8) throw err('o の後にオクターブ数(0-8)が必要です');
+        if (n === null || n > 8) throw err('o の後にオクターブ数(0-8)が必要です', numAt);
         oct = n;
       } else if (ch === '>') {
         if (oct >= 8) throw err('> でオクターブが 8 を超えます');
@@ -268,22 +275,22 @@ const MMLPlayer = (() => {
       } else if (ch === 'l') {
         pos++;
         const n = readInt();
-        if (n === null || n <= 0) throw err('l の後に音長が必要です');
+        if (n === null || n <= 0) throw err('l の後に音長が必要です', numAt);
         defLen = n;
       } else if (ch === 't') {
         pos++;
         const n = readInt();
-        if (n === null || n <= 0) throw err('t の後にテンポが必要です');
+        if (n === null || n <= 0) throw err('t の後にテンポが必要です', numAt);
         tempo = n;
       } else if (ch === 'v') {
         pos++;
         const n = readInt();
-        if (n === null || n > 15) throw err('v の後に音量(0-15)が必要です');
+        if (n === null || n > 15) throw err('v の後に音量(0-15)が必要です', numAt);
         vol = n;
       } else if (ch === 'q') {
         pos++;
         const n = readInt();
-        if (n === null || n < 1 || n > 8) throw err('q の後にゲート(1-8)が必要です');
+        if (n === null || n < 1 || n > 8) throw err('q の後にゲート(1-8)が必要です', numAt);
         q = n;
       } else if (ch === '@') {
         pos++;
@@ -291,7 +298,7 @@ const MMLPlayer = (() => {
         if (sub === 'e') {
           pos++;
           const n = readNums(4, false, '@e', '@e は attack,decay,sustain,release の4値が必要です');
-          if (n[2] > 100) throw err('@e の sustain は 0-100 で指定してください');
+          if (n[2] > 100) throw err('@e の sustain は 0-100 で指定してください', numsAt[2]);
           env = { a: n[0], d: n[1], s: n[2], r: n[3] };
         } else if (sub === 'b') {
           pos++;
@@ -299,7 +306,7 @@ const MMLPlayer = (() => {
           bend = ct === 0 ? null : { cent: ct, sec: ms / 1000 };
         } else {
           const n = readInt();
-          if (n === null || n < 0 || n >= WAVES.length) throw err(`@ の後に音色番号(0-${WAVES.length - 1})が必要です`);
+          if (n === null || n < 0 || n >= WAVES.length) throw err(`@ の後に音色番号(0-${WAVES.length - 1})が必要です`, numAt);
           wave = n;
         }
       } else {
