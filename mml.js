@@ -21,6 +21,17 @@
 //   @<n>            音色 0=sine 1=square 2=triangle 3=sawtooth 4=noise (初期値1)
 //   @e<a>,<d>,<s>,<r> エンベロープ: attack(ms), decay(ms), sustain(%), release(ms)
 //                     初期値 @e3,0,100,40
+//   &               タイ/スラー。前の音符と繋いでアタックを鳴らし直さない
+//                     c4&c8 = 同じ高さを繋いで長くする（タイ）
+//                     c4&e4 = 再アタックせず音程だけ差し替える（スラー）
+//   m<遅>,<速>,<深> LFO（ビブラート）: 遅れ(ms), 速さ(Hz), 深さ(セント。中心から±)
+//                     遅れは音符ごとに数え直す（& で繋いだ音は繋いだ全体で1音）
+//                     波形はサイン波固定。初期値 m0,0,0（無効）
+//   p<n>            ポルタメント。& の繋ぎ目を n ミリ秒かけて滑らせる。
+//                     & のない音符の並びには効かない。初期値 p0（瞬時に切り替え）
+//   @b<ずれ>,<時間> ベンド。出だしの音程を「ずれ」セント（負で下から/正で上から）ずらし、
+//                     「時間」ミリ秒で正規の音程へ寄せる。次の音符1つにだけ効く（休符は
+//                     消費しない）ので解除は不要。m と同じ detune 上で加算される
 //   [ ... ]<n>      リピート n回（ネスト可）
 //   [ ... ]0        n を省略するか 0 で無限ループ: 2周目以降ここから繰り返す（曲のループ開始点）。
 //                   トラック末尾にのみ書ける。ループ再生OFF時は1回だけ演奏。
@@ -48,6 +59,7 @@ const MMLPlayer = (() => {
   const WAVES = ['sine', 'square', 'triangle', 'sawtooth', 'noise'];
   const LOOKAHEAD_SEC = 0.15;
   const TICK_MS = 50;
+  const LFO_FADE = 0.05;   // LFOが効き始めるときの立ち上がり時間（秒）
 
   function _getCtx() {
     if (!_ctx) {
@@ -100,6 +112,10 @@ const MMLPlayer = (() => {
     let pos = 0;
     let oct = 4, defLen = 4, tempo = 120, vol = 10, wave = 1, q = 8;
     let env = { a: 3, d: 0, s: 100, r: 40 };
+    let lfo = { delay: 0, rate: 0, depth: 0 };   // m: 遅れ(秒), 速さ(Hz), 深さ(セント)
+    let porta = 0;          // p: & の繋ぎ目を滑らせる時間（秒）
+    let bend = null;        // @b: 次の音符1つにだけ効く（使うと消える）
+    let tie = false;        // & の直後か（次の音符を前の音に繋ぐ）
     let time = 0;
     let loopStart = null;   // 無限ループ開始点（秒）
     const evs = [];
@@ -109,6 +125,24 @@ const MMLPlayer = (() => {
       let s = '';
       while (pos < src.length && /\d/.test(src[pos])) s += src[pos++];
       return s === '' ? null : parseInt(s, 10);
+    };
+    // カンマ区切りの整数を n 個読む（値の前後の空白は許す）。signed=true なら先頭の - を符号と見る
+    const readNums = (n, signed, label, needMsg) => {
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        while (pos < src.length && src[pos] === ' ') pos++;
+        let sign = 1;
+        if (signed && src[pos] === '-') { sign = -1; pos++; }
+        const v = readInt();
+        if (v === null) throw err(needMsg);
+        out.push(sign * v);
+        if (i < n - 1) {
+          while (pos < src.length && src[pos] === ' ') pos++;
+          if (src[pos] !== ',') throw err(`${label} の値はカンマ区切りで指定してください`);
+          pos++;
+        }
+      }
+      return out;
     };
     const readDots = () => {
       let n = 0;
@@ -143,17 +177,44 @@ const MMLPlayer = (() => {
         const dur = beats * (60 / tempo);
         const midi = 12 * (oct + 1) + idx;
         const freq = 440 * Math.pow(2, (midi - 69) / 12);
-        evs.push({
-          time, dur, midi, track: ti,
-          gate: Math.max(dur * q / 8, 0.02),
-          freq, wave,
-          vol: Math.max((vol / 15) * 0.3, 0.0005),
-          env: { ...env },
-        });
+        if (tie) {
+          // & で前の音に繋ぐ。新たに発音せず、前の音に音程の区間を足して伸ばすだけ。
+          // 音色・音量・エンベロープは繋いだ先頭の音のものを全体に使う（発音は1回だから）
+          const last = evs[evs.length - 1];
+          last.segs.push({ freq, midi, dur });
+          last.dur += dur;
+          last.gate = Math.max(last.dur * last.q / 8, 0.02);
+          tie = false;
+        } else {
+          evs.push({
+            time, dur, midi, track: ti, q,
+            gate: Math.max(dur * q / 8, 0.02),
+            freq, wave,
+            vol: Math.max((vol / 15) * 0.3, 0.0005),
+            env: { ...env },
+            segs: [{ freq, midi, dur }],   // & で繋いだ音程の区間（通常は1つ）
+            lfo: { ...lfo }, porta, bend,
+          });
+          bend = null;   // @b は1回限り
+        }
         time += dur;
       } else if (ch === 'r') {
+        if (tie) throw err('& の後には音符が必要です（休符は繋げません）');
         pos++;
         time += readDuration() * (60 / tempo);
+      } else if (ch === '&') {
+        if (!evs.length) throw err('& の前に音符が必要です');
+        pos++;
+        tie = true;
+      } else if (ch === 'm') {
+        pos++;
+        const [dl, rt, dp] = readNums(3, false, 'm', 'm は 遅れ,速さ,深さ の3値が必要です');
+        lfo = { delay: Math.max(0, dl) / 1000, rate: Math.max(0, rt), depth: Math.max(0, dp) };
+      } else if (ch === 'p') {
+        pos++;
+        const n = readInt();
+        if (n === null) throw err('p の後にポルタメント時間(ミリ秒)が必要です');
+        porta = Math.max(0, n) / 1000;
       } else if (ch === 'o') {
         pos++;
         const n = readInt();
@@ -183,21 +244,15 @@ const MMLPlayer = (() => {
         q = Math.max(1, Math.min(8, n));
       } else if (ch === '@') {
         pos++;
-        if (pos < src.length && src[pos].toLowerCase() === 'e') {
+        const sub = pos < src.length ? src[pos].toLowerCase() : '';
+        if (sub === 'e') {
           pos++;
-          const nums = [];
-          for (let i = 0; i < 4; i++) {
-            while (pos < src.length && src[pos] === ' ') pos++;
-            const n = readInt();
-            if (n === null) throw err('@e は attack,decay,sustain,release の4値が必要です');
-            nums.push(n);
-            if (i < 3) {
-              while (pos < src.length && src[pos] === ' ') pos++;
-              if (src[pos] !== ',') throw err('@e の値はカンマ区切りで指定してください');
-              pos++;
-            }
-          }
-          env = { a: nums[0], d: nums[1], s: Math.max(0, Math.min(100, nums[2])), r: nums[3] };
+          const n = readNums(4, false, '@e', '@e は attack,decay,sustain,release の4値が必要です');
+          env = { a: n[0], d: n[1], s: Math.max(0, Math.min(100, n[2])), r: n[3] };
+        } else if (sub === 'b') {
+          pos++;
+          const [ct, ms] = readNums(2, true, '@b', '@b は ずれ(セント),時間(ミリ秒) の2値が必要です');
+          bend = ct === 0 ? null : { cent: ct, sec: Math.max(0, ms) / 1000 };
         } else {
           const n = readInt();
           if (n === null || n < 0 || n >= WAVES.length) throw err(`@ の後に音色番号(0-${WAVES.length - 1})が必要です`);
@@ -207,6 +262,7 @@ const MMLPlayer = (() => {
         throw err(`解釈できない文字です: "${src[pos]}"`);
       }
     }
+    if (tie) throw new Error(`トラック${ti + 1}: & の後には音符が必要です`);
     if (loopStart !== null && time - loopStart < 0.01) {
       throw new Error(`トラック${ti + 1}: 無限ループの中身には音符か休符が必要です`);
     }
@@ -248,6 +304,7 @@ const MMLPlayer = (() => {
 
     // ノイズはバンドパスで帯域の大半を捨てるぶん音量が大きく下がる（低音ほど顕著）ので、
     // 通過帯域幅に応じたメイクアップゲインで他の波形と聴感を揃える
+    // （& で音程が動く場合も繋いだ先頭の音を基準にする。1発音につき1つの値）
     const noiseComp = (WAVES[ev.wave] === 'noise')
       ? Math.min(8, Math.sqrt(c.sampleRate / (2 * ev.freq))) : 1;
     const vol = ev.vol * noiseComp;
@@ -265,25 +322,70 @@ const MMLPlayer = (() => {
     g.gain.setValueAtTime(d > 0 ? sus : vol, tGateEnd);
     g.gain.exponentialRampToValueAtTime(0.0001, tGateEnd + r);
 
-    let src;
+    const tEnd = tGateEnd + r + 0.05;
+
+    // 音程を動かす先（ノイズはバンドパスの中心周波数）。detune はセント単位なので
+    // ベンドとLFOはここで自然に加算される
+    let src, pitch, detune;
     if (WAVES[ev.wave] === 'noise') {
       src = c.createBufferSource();
       src.buffer = _getNoiseBuf(c);
       src.loop = true;
       const filter = c.createBiquadFilter();
       filter.type = 'bandpass';
-      filter.frequency.value = ev.freq;
       filter.Q.value = 1.2;
       src.connect(filter);
       filter.connect(g);
+      pitch = filter.frequency;
+      detune = filter.detune;
     } else {
       src = c.createOscillator();
       src.type = WAVES[ev.wave];
-      src.frequency.value = ev.freq;
       src.connect(g);
+      pitch = src.frequency;
+      detune = src.detune;
     }
+
+    // & で繋いだ区間ごとに音程を差し替える。p 指定時は繋ぎ目を滑らせる
+    // （周波数を指数カーブで動かす = 音程としては等速に聞こえる）
+    pitch.setValueAtTime(ev.segs[0].freq, t);
+    let ts = t;
+    for (let i = 1; i < ev.segs.length; i++) {
+      ts += ev.segs[i - 1].dur;
+      const glide = Math.min(ev.porta, ev.segs[i].dur);
+      if (glide > 0.001) {
+        pitch.setValueAtTime(ev.segs[i - 1].freq, ts);
+        pitch.exponentialRampToValueAtTime(ev.segs[i].freq, ts + glide);
+      } else {
+        pitch.setValueAtTime(ev.segs[i].freq, ts);
+      }
+    }
+
+    // ベンド: 出だしをずらして正規の音程へ寄せる（音より長い指定はゲート長で頭打ち）
+    if (ev.bend) {
+      detune.setValueAtTime(ev.bend.cent, t);
+      const bs = Math.min(ev.bend.sec, gate);
+      if (bs > 0) detune.linearRampToValueAtTime(0, t + bs);
+      else detune.setValueAtTime(0, t);
+    }
+
+    // LFO（ビブラート）: 遅れてから効き始める。立ち上がりを少しなだらかにして唐突さを消す
+    if (ev.lfo.rate > 0 && ev.lfo.depth > 0) {
+      const lo = c.createOscillator();
+      lo.type = 'sine';
+      lo.frequency.value = ev.lfo.rate;
+      const lg = c.createGain();
+      lg.gain.setValueAtTime(0, t);
+      lg.gain.setValueAtTime(0, t + ev.lfo.delay);
+      lg.gain.linearRampToValueAtTime(ev.lfo.depth, t + ev.lfo.delay + LFO_FADE);
+      lo.connect(lg);
+      lg.connect(detune);
+      lo.start(t);
+      lo.stop(tEnd);
+    }
+
     src.start(t);
-    src.stop(tGateEnd + r + 0.05);
+    src.stop(tEnd);
   }
 
   function _tick() {

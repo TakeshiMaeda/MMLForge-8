@@ -1,0 +1,245 @@
+; ============================================================
+;  Elven Morning — 異世界エルフの町、朝のケルト風楽曲
+; ------------------------------------------------------------
+;  調 : D ミクソリディアン（D E F# G A B C）
+;  拍 : 6/8 ジグ（1小節 = 8分音符6つ） / t175
+;  尺 : 前奏8小節 + 本体144小節 = 152小節 / 2分36秒。
+;       本体を [ ]0（無限ループ）で括ってあるので、ループ再生では前奏に戻らず
+;       本体だけを繰り返す。ループ再生OFFなら通しで1回鳴って停止する
+;
+;  ch1 笛（ティンホイッスル）  ch2 弦（パッド）  ch3 ハープ
+;  ch4 ベース                  ch5 打楽器（ボーラン）
+;  ch6 ハープの残響（ch3 を32分ずらした小音量コピー。疑似リバーブ）
+;
+;  装飾の方針: 歌うところだけ飾り、走るところは素のまま。
+;    ビブラート m … 笛と弦のみ。遅れを長くとって、伸ばす音だけが揺れるようにする
+;    スラー &    … 跳躍を滑って入るところだけ（A主題1・3・5小節、C の5・7小節）
+;    ベンド @b   … 楽節の入りのしゃくり（A9小節、C頭、E の笛の入り、F頭）
+;    B・D（ジグとリール）は走句なので一切飾らない。ハープ・ベース・打楽器も素のまま
+;
+;  構成（前奏8小節 + 本体144小節）
+;    A x2 (32) 主題。1周目は笛+ハープ+ベース、2周目で弦と打楽器が入る
+;    B x2 (32) 副主題。町が動き出す跳ねたジグ
+;    C    (16) 神秘のブリッジ（Em/Bm 寄り）
+;    D x2 (32) リール風の快活な走句
+;    E    (16) 静かな間奏（ハープと弦だけ、朝の光）
+;    F    (16) 主題の再現（総奏）
+; ============================================================
+
+
+; ── ch1 笛（ティンホイッスル） ──────────────────────────────
+;   m150,5,30 は「遅れ150ms」なので8分音符には効かない（t175の8分=171ms、
+;   ゲートq7=150msで揺れ始める前に切れる）。伸ばす音だけが揺れる＝奏者と同じ挙動。
+;   p30 は & の繋ぎ目を30msで滑らせる設定。跳躍を滑って入るところにだけ & を置いている
+;   （滑りを強めるなら 50〜80、ほぼ瞬時にするなら 15 あたり）
+t175 l8 @2 v6 q7 @e18,0,100,70 m150,5,30 p30
+  ; 前奏は休み
+  [r2.]8
+  [
+    ; === A 主題 x2 ===
+    [ o5 d f+ a&>d4.  | o5 b a g e4.   | o5 g a b&>d4.  | o5 a4. f+4.
+      o5 f+ a >d&<a4.  | o5 g e c e4.   | o5 d e f+ g4.  | o5 f+4. d4.
+      o5 f+ @b-120,70 b a f+4. | o5 e a g e4. | o5 b a g d4. | o5 a f+ e d4.
+      o5 c e g >c4.    | o6 d <b a g4.  | o5 c e a e4.   | o5 f+4. d4. ]2
+    ; === B 副主題 x2 ===
+    [ o5 g a b g b >d    | o5 a f+ d f+ a >d | o5 g e c e g >c   | o5 a f+ d a f+ d
+      o5 g a b g b >d    | o5 a f+ d f+ a >d | o5 a g e c e a    | o5 d f+ a >d4.
+      o5 b >d <b a f+ b  | o5 g b >d <b g d  | o5 a >c <a g e a  | o5 f+ a >d <a f+ d
+      o5 g a b >d <b g   | o5 e g >c <g e c  | o5 d f+ a >d <a f+ | o5 d2. ]2
+    ; === C 神秘のブリッジ ===
+      @b-100,80 o5 b4. g4. | o5 a f+ d f+4. | o5 e g e c4. | o5 d e f+ a4.
+      o5 b >d <b&g4.   | o5 a f+ e f+4. | o5 e a >c&<e4. | o5 f+ b a f+4.
+      o5 e g >c <g4.   | o5 b a g d4.   | o5 c e a e4.   | o5 b g e g4.
+      o5 c e g >c4.    | o6 d <a f+ a4. | o5 g e c e4.   | o5 f+ e d d4.
+    ; === D リール x2 ===
+    [ o5 d16 e16 f+ a f+ d f+ | o5 a >d <a f+ d f+ | o5 g e c e g e   | o5 e g >c <g e c
+      o5 g a b >d <b g        | o5 b >d <b a g d   | o5 f+ a >d <a f+ a | o5 d f+ a >d4.
+      o5 f+ b >d <b f+ d      | o5 b a f+ d f+ a   | o5 a g e c e g   | o5 e a >c <a e c
+      o5 d g b >d <b g        | o5 c e g >c <g e   | o5 d f+ a >d <a f+ | o5 d2. ]2
+    ; === E 静かな間奏 ===
+      [r2.]4
+      @b-100,90 o5 e4. a4. | o5 g4. e4.  | o5 e4. g4.     | o5 f+2.
+      o5 b4. a4.       | o5 f+4. d4.    | o5 e4. g4.     | o5 b2.
+      o5 a4. g4.       | o5 e4. c4.     | o5 d4. g4.     | o5 f+4. a4.
+    ; === F 再現 ===
+      @b-150,90 o5 d f+ a&>d4. | o5 b a g e4. | o5 g a b&>d4. | o5 a4. f+4.
+      o5 f+ a >d&<a4.  | o5 g e c e4.   | o5 d e f+ g4.  | o5 f+4. d4.
+      o5 f+ @b-120,70 b a f+4. | o5 e a g e4. | o5 b a g d4. | o5 a f+ e d4.
+      o5 c e g >c4.    | o6 d <b a g4.  | o5 c e a e4.   | o5 f+4. d4.
+  ]0
+
+
+; ── ch2 弦（パッド） ────────────────────────────────────────
+;   遅く浅い揺れ。全音符級の長さしか無いトラックなので、遅れ300msでも十分育つ
+t175 l8 @3 v4 q8 @e150,0,100,300 m300,4,15
+  ; 前奏 : 4小節休んでから薄く入る
+  [r2.]4
+  o4 b2. | o4 a2. | o4 d2. | o4 f+2.
+  [
+    ; A : 1周目は休み、2周目から鳴らす
+    [r2.]16
+    o4 f+2. e2. d2. f+2. | a2. g2. b2. a2.
+    o4 f+2. e2. d2. f+2. | e2. d2. c2. d2.
+    ; B x2
+    [ o4 b2. a2. g2. f+2. | b2. a2. e2. f+2.
+      o4 d2. b2. a2. f+2. | b2. g2. a2. f+2. ]2
+    ; C
+    o4 g2. f+2. e2. f+2. | b2. a2. e2. f+2.
+    o4 g2. d2. e2. g2.   | e2. f+2. a2. f+2.
+    ; D x2
+    [ o4 f+2. a2. e2. g2. | b2. d2. f+2. a2.
+      o4 f+2. d2. e2. c2. | b2. g2. f+2. a2. ]2
+    ; E
+    o4 b2. a2. g2. f+2.  | e2. g2. e2. f+2.
+    o4 b2. a2. g2. b2.   | c2. e2. b2. a2.
+    ; F
+    o4 f+2. e2. d2. f+2. | a2. g2. b2. a2.
+    o4 f+2. e2. d2. f+2. | e2. d2. c2. d2.
+  ]0
+
+
+; ── ch3 ハープ ──────────────────────────────────────────────
+t175 l8 @1 v6 q8 @e1,130,18,220
+  ; 前奏 : D C G D Bm Am G D
+  o4 d f+ a >d <a f+ | o4 c e g >c <g e  | o3 g b >d g d <b   | o4 d f+ a >d <a f+
+  o3 b >d f+ b f+ d  | o3 a >c e a e c   | o3 g b >d g d <b   | o4 d f+ a >d <a f+
+  [
+    ; A x2
+    [ o4 d f+ a >d <a f+ | o4 c e g >c <g e | o3 g b >d g d <b | o4 d f+ a >d <a f+
+      o4 d f+ a >d <a f+ | o4 c e g >c <g e | o3 g b >d g d <b | o4 d f+ a >d <a f+
+      o3 b >d f+ b f+ d  | o3 a >c e a e c  | o3 g b >d g d <b | o4 d f+ a >d <a f+
+      o4 c e g >c <g e   | o3 g b >d g d <b | o3 a >c e a e c  | o4 d f+ a >d <a f+ ]2
+    ; B x2
+    [ o3 g b >d g d <b   | o4 d f+ a >d <a f+ | o4 c e g >c <g e | o4 d f+ a >d <a f+
+      o3 g b >d g d <b   | o4 d f+ a >d <a f+ | o3 a >c e a e c  | o4 d f+ a >d <a f+
+      o3 b >d f+ b f+ d  | o3 g b >d g d <b   | o3 a >c e a e c  | o4 d f+ a >d <a f+
+      o3 g b >d g d <b   | o4 c e g >c <g e   | o4 d f+ a >d <a f+ | o4 d f+ a >d <a f+ ]2
+    ; C
+    o4 e g b >e <b g   | o4 d f+ a >d <a f+ | o4 c e g >c <g e | o4 d f+ a >d <a f+
+    o4 e g b >e <b g   | o4 d f+ a >d <a f+ | o3 a >c e a e c  | o3 b >d f+ b f+ d
+    o4 c e g >c <g e   | o3 g b >d g d <b   | o3 a >c e a e c  | o4 e g b >e <b g
+    o4 c e g >c <g e   | o4 d f+ a >d <a f+ | o3 a >c e a e c  | o4 d f+ a >d <a f+
+    ; D x2
+    [ o4 d f+ a >d <a f+ | o4 d f+ a >d <a f+ | o4 c e g >c <g e | o4 c e g >c <g e
+      o3 g b >d g d <b   | o3 g b >d g d <b   | o4 d f+ a >d <a f+ | o4 d f+ a >d <a f+
+      o3 b >d f+ b f+ d  | o3 b >d f+ b f+ d  | o3 a >c e a e c  | o3 a >c e a e c
+      o3 g b >d g d <b   | o4 c e g >c <g e   | o4 d f+ a >d <a f+ | o4 d f+ a >d <a f+ ]2
+    ; E
+    o3 g b >d g d <b   | o4 d f+ a >d <a f+ | o4 c e g >c <g e | o4 d f+ a >d <a f+
+    o3 a >c e a e c    | o4 e g b >e <b g   | o4 c e g >c <g e | o4 d f+ a >d <a f+
+    o3 g b >d g d <b   | o4 d f+ a >d <a f+ | o4 c e g >c <g e | o3 g b >d g d <b
+    o3 a >c e a e c    | o4 c e g >c <g e   | o3 g b >d g d <b | o4 d f+ a >d <a f+
+    ; F
+    o4 d f+ a >d <a f+ | o4 c e g >c <g e | o3 g b >d g d <b | o4 d f+ a >d <a f+
+    o4 d f+ a >d <a f+ | o4 c e g >c <g e | o3 g b >d g d <b | o4 d f+ a >d <a f+
+    o3 b >d f+ b f+ d  | o3 a >c e a e c  | o3 g b >d g d <b | o4 d f+ a >d <a f+
+    o4 c e g >c <g e   | o3 g b >d g d <b | o3 a >c e a e c  | o4 d f+ a >d <a f+
+  ]0
+
+
+; ── ch4 ベース ──────────────────────────────────────────────
+t175 l8 @2 v11 q6 @e5,0,100,60
+  ; 前奏 : 4小節休んでから入る
+  [r2.]4
+  o3 b4. f+4. | o3 a4. e4. | o3 g4. d4. | o3 d4. o2 a4.
+  [
+    ; A x2
+    [ o3 d4. o2 a4. | o3 c4. o2 g4. | o3 g4. d4.  | o3 d4. o2 a4.
+      o3 d4. o2 a4. | o3 c4. o2 g4. | o3 g4. d4.  | o3 d4. o2 a4.
+      o3 b4. f+4.   | o3 a4. e4.    | o3 g4. d4.  | o3 d4. o2 a4.
+      o3 c4. o2 g4. | o3 g4. d4.    | o3 a4. e4.  | o3 d4. o2 a4. ]2
+    ; B x2
+    [ o3 g r g d r d   | o3 d r d o2 a r a | o3 c r c o2 g r g | o3 d r d o2 a r a
+      o3 g r g d r d   | o3 d r d o2 a r a | o3 a r a e r e    | o3 d r d o2 a r a
+      o3 b r b f+ r f+ | o3 g r g d r d    | o3 a r a e r e    | o3 d r d o2 a r a
+      o3 g r g d r d   | o3 c r c o2 g r g | o3 d r d o2 a r a | o3 d r d o2 a r a ]2
+    ; C
+    o3 e4. o2 b4. | o3 d4. o2 a4. | o3 c4. o2 g4. | o3 d4. o2 a4.
+    o3 e4. o2 b4. | o3 d4. o2 a4. | o3 a4. e4.    | o3 b4. f+4.
+    o3 c4. o2 g4. | o3 g4. d4.    | o3 a4. e4.    | o3 e4. o2 b4.
+    o3 c4. o2 g4. | o3 d4. o2 a4. | o3 a4. e4.    | o3 d4. o2 a4.
+    ; D x2
+    [ o3 d r d o2 a r a | o3 d r d o2 a r a | o3 c r c o2 g r g | o3 c r c o2 g r g
+      o3 g r g d r d    | o3 g r g d r d    | o3 d r d o2 a r a | o3 d r d o2 a r a
+      o3 b r b f+ r f+  | o3 b r b f+ r f+  | o3 a r a e r e    | o3 a r a e r e
+      o3 g r g d r d    | o3 c r c o2 g r g | o3 d r d o2 a r a | o3 d r d o2 a r a ]2
+    ; E
+    o3 g4. d4.    | o3 d4. o2 a4. | o3 c4. o2 g4. | o3 d4. o2 a4.
+    o3 a4. e4.    | o3 e4. o2 b4. | o3 c4. o2 g4. | o3 d4. o2 a4.
+    o3 g4. d4.    | o3 d4. o2 a4. | o3 c4. o2 g4. | o3 g4. d4.
+    o3 a4. e4.    | o3 c4. o2 g4. | o3 g4. d4.    | o3 d4. o2 a4.
+    ; F
+    o3 d r d o2 a r a | o3 c r c o2 g r g | o3 g r g d r d | o3 d r d o2 a r a
+    o3 d r d o2 a r a | o3 c r c o2 g r g | o3 g r g d r d | o3 d r d o2 a r a
+    o3 b r b f+ r f+  | o3 a r a e r e    | o3 g r g d r d | o3 d r d o2 a r a
+    o3 c r c o2 g r g | o3 g r g d r d    | o3 a r a e r e | o3 d r d o2 a r a
+  ]0
+
+
+; ── ch5 打楽器（ボーラン） ──────────────────────────────────
+;   o3 = キック / o5 = スネア / o7 = ハット
+t175 l8 @4 v5 q5 @e1,0,100,25
+  [r2.]8
+  [
+    ; A 1周目は休み / 2周目は軽く
+    [r2.]16
+    [ v6 o3 c v2 o7 c c r c c ]16
+    ; B x2 : ジグの手
+    [ v6 o3 c v2 o7 c c v4 o5 c v2 o7 c c ]32
+    ; C : 静かに
+    [ v6 o3 c v2 o7 c c r c c ]16
+    ; D x2 : 総奏
+    [ v6 o3 c v2 o7 c c v4 o5 c v2 o7 c v6 o3 c ]32
+    ; E : 休み
+    [r2.]16
+    ; F : 総奏
+    [ v6 o3 c v2 o7 c c v4 o5 c v2 o7 c v6 o3 c ]16
+  ]0
+
+
+; ── ch6 ハープの残響（ch3 を32分ずらした複製） ──────────────
+;   32分(t175 で42.9ms)ずらした小音量のコピーで疑似リバーブを作る。
+;   16分ずらしだと8分音符の真ん中に落ちてアルペジオが倍速になるだけなので使えない。
+;   同じ波形をずらすとコムフィルタが立つため、こちらは @0（サイン波）にして
+;   リリースを伸ばし、輪郭をぼかしてある。
+;
+;   尺の帳尻: 頭の r32 のぶん、その塊の最後の音を 1/32 詰めてある（f+ → f+16.）。
+;   前奏8小節と本体144小節それぞれで閉じているので、他トラックと同じ152小節に収まり、
+;   ループの周回でもずれが積もらない。詰めた1/32は分散和音の最後の1音なので聞こえない
+t175 l8 @0 v3 q8 @e1,200,10,400
+  r32
+  o4 d f+ a >d <a f+ | o4 c e g >c <g e  | o3 g b >d g d <b   | o4 d f+ a >d <a f+
+  o3 b >d f+ b f+ d  | o3 a >c e a e c   | o3 g b >d g d <b   | o4 d f+ a >d <a f+16.
+  [
+    r32
+    ; A x2
+    [ o4 d f+ a >d <a f+ | o4 c e g >c <g e | o3 g b >d g d <b | o4 d f+ a >d <a f+
+      o4 d f+ a >d <a f+ | o4 c e g >c <g e | o3 g b >d g d <b | o4 d f+ a >d <a f+
+      o3 b >d f+ b f+ d  | o3 a >c e a e c  | o3 g b >d g d <b | o4 d f+ a >d <a f+
+      o4 c e g >c <g e   | o3 g b >d g d <b | o3 a >c e a e c  | o4 d f+ a >d <a f+ ]2
+    ; B x2
+    [ o3 g b >d g d <b   | o4 d f+ a >d <a f+ | o4 c e g >c <g e | o4 d f+ a >d <a f+
+      o3 g b >d g d <b   | o4 d f+ a >d <a f+ | o3 a >c e a e c  | o4 d f+ a >d <a f+
+      o3 b >d f+ b f+ d  | o3 g b >d g d <b   | o3 a >c e a e c  | o4 d f+ a >d <a f+
+      o3 g b >d g d <b   | o4 c e g >c <g e   | o4 d f+ a >d <a f+ | o4 d f+ a >d <a f+ ]2
+    ; C
+    o4 e g b >e <b g   | o4 d f+ a >d <a f+ | o4 c e g >c <g e | o4 d f+ a >d <a f+
+    o4 e g b >e <b g   | o4 d f+ a >d <a f+ | o3 a >c e a e c  | o3 b >d f+ b f+ d
+    o4 c e g >c <g e   | o3 g b >d g d <b   | o3 a >c e a e c  | o4 e g b >e <b g
+    o4 c e g >c <g e   | o4 d f+ a >d <a f+ | o3 a >c e a e c  | o4 d f+ a >d <a f+
+    ; D x2
+    [ o4 d f+ a >d <a f+ | o4 d f+ a >d <a f+ | o4 c e g >c <g e | o4 c e g >c <g e
+      o3 g b >d g d <b   | o3 g b >d g d <b   | o4 d f+ a >d <a f+ | o4 d f+ a >d <a f+
+      o3 b >d f+ b f+ d  | o3 b >d f+ b f+ d  | o3 a >c e a e c  | o3 a >c e a e c
+      o3 g b >d g d <b   | o4 c e g >c <g e   | o4 d f+ a >d <a f+ | o4 d f+ a >d <a f+ ]2
+    ; E
+    o3 g b >d g d <b   | o4 d f+ a >d <a f+ | o4 c e g >c <g e | o4 d f+ a >d <a f+
+    o3 a >c e a e c    | o4 e g b >e <b g   | o4 c e g >c <g e | o4 d f+ a >d <a f+
+    o3 g b >d g d <b   | o4 d f+ a >d <a f+ | o4 c e g >c <g e | o3 g b >d g d <b
+    o3 a >c e a e c    | o4 c e g >c <g e   | o3 g b >d g d <b | o4 d f+ a >d <a f+
+    ; F
+    o4 d f+ a >d <a f+ | o4 c e g >c <g e | o3 g b >d g d <b | o4 d f+ a >d <a f+
+    o4 d f+ a >d <a f+ | o4 c e g >c <g e | o3 g b >d g d <b | o4 d f+ a >d <a f+
+    o3 b >d f+ b f+ d  | o3 a >c e a e c  | o3 g b >d g d <b | o4 d f+ a >d <a f+
+    o4 c e g >c <g e   | o3 g b >d g d <b | o3 a >c e a e c  | o4 d f+ a >d <a f+16.
+  ]0
