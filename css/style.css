@@ -10,6 +10,9 @@
   input[type="number"], select { background: #111a2a; color: #eee; border: 1px solid #334455; border-radius: 4px; padding: 3px 6px; font-family: inherit; }
   #status { font-size: 13px; color: #88cc88; }
   #error { color: #ff8888; font-size: 13px; white-space: pre-wrap; min-height: 1.2em; }
+  #barReport { margin: 4px 0; font-size: 12px; line-height: 1.5; white-space: pre-wrap; color: #99a; }
+  #barReport:empty { display: none; }
+  #barReport .ng { color: #ffcc66; }
   #recStatus { font-size: 13px; color: #ffaa88; }
   details { margin-top: 18px; font-size: 13px; color: #aab; }
   summary { cursor: pointer; color: #88aaff; font-size: 14px; }

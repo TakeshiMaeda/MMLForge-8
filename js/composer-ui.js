@@ -90,7 +90,7 @@ function doHarmonize(seed) {
     status.textContent = playStatusText(info) + (res.warning ? ' ※' + res.warning : '');
   } catch (e) {
     status.textContent = '';
-    error.textContent = e.message;
+    showError(e);   // メロディ(先頭トラック)の記法エラーは原文の行・文字位置で示す
   }
 }
 document.getElementById('harmGo').addEventListener('click',
@@ -129,7 +129,7 @@ function doExtend(seed) {
     status.textContent = `メロディに${bars}小節追い足しました（「元に戻す」で取り消し可）` + (res.warning ? ' ※' + res.warning : '');
   } catch (e) {
     status.textContent = '';
-    error.textContent = e.message;
+    showError(e);
   }
 }
 document.getElementById('melExtend').addEventListener('click',

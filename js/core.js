@@ -78,8 +78,12 @@ ta.value = localStorage.getItem('mmlforge8') || SAMPLE;
 ta.addEventListener('input', () => {
   localStorage.setItem('mmlforge8', ta.value);
   renderChToggles();
+  document.getElementById('barReport').textContent = '';   // 編集したら小節チェックの結果は古くなる
 });
 renderChToggles();
+
+// 小節チェックの拍子（曲ごとに変わるので覚えておく）
+document.getElementById('barBeats').value = localStorage.getItem('mmlforge8-barbeats') || '4';
 
 // コメントを空白に置き換える（行構造は維持されるので行番号がずれない）
 //   ; …… そこから行末まで（行頭でも行の途中でも可）
@@ -104,11 +108,16 @@ function stripComments(text) {
   return out;
 }
 
-// テキストエリアをトラックブロックに分解する
+// テキストエリアをトラックブロックに分解する（トラック分割のルールはここだけが知っている）
 // ルール: 行頭から始まる行 = 新トラック。行頭が空白の行 = 前のトラックの継続。
 //         コメント（; 行末まで / ブロック /* */）は stripComments で空白化済みのため
 //         コメントだけの行や空行は透過（トラックを分断しない。トラック途中に挟める）
-// 戻り値: [{ mml: 連結済みMML, start, end }]（start/end = トラックに属する行番号の範囲）
+// 戻り値: [{ mml, start, end, lines, pieces }]
+//   mml    … 各行を trim して ' ' で連結した1トラック分のMML（mml.js にそのまま渡せる）
+//   start/end … トラックに属する行の範囲（0始まりの行インデックス）
+//   lines  … 属する行の一覧 [{ no: 1始まりの行番号, text: trim済み }]（空行・コメントのみの行は除く）
+//   pieces … mml の各行ぶんが原文のどこから来たか [{ from: mml内の開始位置, line: 0始まり行, col: 0始まり桁 }]
+//            （mml.js のエラー位置を原文の行・桁に戻すための対応表。trackPos が使う）
 function parseTrackBlocks(text) {
   const lines = stripComments(text).split('\n');
   const blocks = [];
@@ -116,15 +125,40 @@ function parseTrackBlocks(text) {
   lines.forEach((line, i) => {
     const t = line.trim();
     if (!t) return;
+    const col = line.length - line.trimStart().length;
     if (/^[ \t]/.test(line) && cur) {
+      cur.pieces.push({ from: cur.mml.length + 1, line: i, col });
       cur.mml += ' ' + t;
       cur.end = i;
+      cur.lines.push({ no: i + 1, text: t });
     } else {
-      cur = { mml: t, start: i, end: i };
+      cur = { mml: t, start: i, end: i, lines: [{ no: i + 1, text: t }], pieces: [{ from: 0, line: i, col }] };
       blocks.push(cur);
     }
   });
   return blocks;
+}
+
+// mml.js が返す位置（block.mml 内の1始まりの文字位置）を原文の { line, col }（どちらも1始まり）に戻す
+function trackPos(block, pos) {
+  const i = pos - 1;
+  let pc = block.pieces[0];
+  for (const p of block.pieces) { if (p.from <= i) pc = p; else break; }
+  return { line: pc.line + 1, col: pc.col + (i - pc.from) + 1 };
+}
+
+// mml.js のエラー「トラックN 位置M: 内容」を、エディタ上の行と文字位置「トラックN L行目 C文字目: 内容」に
+// 書き換える。位置情報の無いエラー（生成系のエラー等）はそのまま返す
+function locateError(e, blocks) {
+  const b = blocks[e.track];
+  if (!b || !(e.pos > 0)) return e.message;
+  const { line, col } = trackPos(b, e.pos);
+  return e.message.replace(/^トラック\d+ 位置\d+: /, `トラック${e.track + 1} ${line}行目 ${col}文字目: `);
+}
+
+// エラー欄に出す。MMLの記法エラーなら原文の行と文字位置に直す
+function showError(e) {
+  error.textContent = locateError(e, parseTrackBlocks(ta.value));
 }
 
 function tracks() {
@@ -143,6 +177,15 @@ function optTokenize(s, ranges) {
     let i = from;
     const num = () => { let v = ''; while (i < to && /\d/.test(s[i])) v += s[i++]; return v; };
     const val = (v) => (v === '' ? null : parseInt(v, 10));
+    // カンマ区切りの n 個の数値を読み飛ばす（mml.js の readNums と同じ形）
+    const nums = (n, signed) => {
+      for (let k = 0; k < n; k++) {
+        while (i < to && s[i] === ' ') i++;
+        if (signed && i < to && (s[i] === '-' || s[i] === '+')) i++;
+        num();
+        if (k < n - 1) { while (i < to && s[i] === ' ') i++; if (i < to && s[i] === ',') i++; }
+      }
+    };
     while (i < to) {
       const st = i;
       const ch = s[i].toLowerCase();
@@ -161,17 +204,15 @@ function optTokenize(s, ranges) {
       else if (ch === '[') { i++; toks.push({ type: '[', start: st, end: i }); }
       else if (ch === ']') { i++; const n = num(); toks.push({ type: ']', start: st, end: i, count: n === '' ? 0 : parseInt(n, 10) }); }
       else if (ch === '@') {
+        // @b は数値が負を取りうる。ここで読み切らないと続く b が音符と誤読される
         i++;
-        if (i < to && s[i].toLowerCase() === 'e') {
-          i++;
-          for (let k = 0; k < 4; k++) {
-            while (i < to && s[i] === ' ') i++;
-            num();
-            if (k < 3) { while (i < to && s[i] === ' ') i++; if (s[i] === ',') i++; }
-          }
-        } else num();
+        const sub = i < to ? s[i].toLowerCase() : '';
+        if (sub === 'e') { i++; nums(4, false); }
+        else if (sub === 'b') { i++; nums(2, true); }
+        else num();
         toks.push({ type: 'other', start: st, end: i });
-      } else if ('tvq'.includes(ch)) { i++; num(); toks.push({ type: 'other', start: st, end: i }); }
+      } else if (ch === 'm') { i++; nums(3, false); toks.push({ type: 'other', start: st, end: i }); }
+      else if ('tvqp'.includes(ch)) { i++; num(); toks.push({ type: 'other', start: st, end: i }); }
       else { i++; toks.push({ type: 'other', start: st, end: i }); }
     }
   });
@@ -248,7 +289,7 @@ document.getElementById('play').addEventListener('click', () => {
     status.textContent = playStatusText(info);
   } catch (e) {
     status.textContent = '';
-    error.textContent = e.message;
+    showError(e);
   }
 });
 // [selFrom, selTo) を最適化した全文を返す（縮められなければ null）。
@@ -329,9 +370,9 @@ document.getElementById('optMml').addEventListener('click', () => {
   let selFrom = ta.selectionStart ?? 0, selTo = ta.selectionEnd ?? 0;
   if (selFrom === selTo) { selFrom = 0; selTo = text.length; }
   try {
-    tracks().forEach(m => MMLPlayer.parse(m));
+    tracks().forEach((m, i) => MMLPlayer.parse(m, i));
   } catch (e) {
-    error.textContent = '最適化の前にMMLのエラーを直してください — ' + e.message;
+    error.textContent = '最適化の前にMMLのエラーを直してください — ' + locateError(e, parseTrackBlocks(text));
     return;
   }
   let res;
@@ -346,6 +387,109 @@ document.getElementById('optMml').addEventListener('click', () => {
   status.textContent = `最適化しました（音長${res.nLen}箇所・オクターブ${res.nOct}箇所`
     + (res.nHead ? `・l4追加${res.nHead}トラック）` : '）');
 });
+// ── 小節チェック ────────────────────────────
+// 手書きMMLで一番多い事故は「1小節に入れる音符の数を間違える」こと。MMLとしては何も間違っていないので
+// パーサは黙って通し、再生してトラックがズレて初めて気づく。しかもどの小節が原因かは分からない。
+// ここでは (1)各トラックの尺が小節の整数倍か (2)全トラックで尺が揃っているか を判定し、
+// 崩れているトラックについては「何行目で小節線から外れ始めたか」を示す。
+//
+// 行ごとの到達位置は、トラック先頭からその行までを丸ごと MMLPlayer.parse して求める。
+// こうするとリピートの展開がパーサ任せになるので、[ ]2 や [ ]48 があっても正しく数えられる。
+// リピートの途中の行は [ が閉じていなくてパースできないので、開いたままの [ の数だけ ]1
+// （1回だけ繰り返す＝中身そのまま）を仮に足して閉じる。こうすると [ ]0 で本体を丸ごと括った
+// 曲でも、中の行が全部スキップされずに位置を測れる。
+function barCheck(beatsPerBar) {
+  const trks = parseTrackBlocks(ta.value);
+  const whole = (x) => Math.abs(x - Math.round(x)) < 1e-6;
+  // 途中までのMMLを測る。リピートの途中なら開いたままの [ の数だけ ]1 を足して閉じる
+  const partial = (src) => {
+    let open = 0;
+    for (const c of src) { if (c === '[') open++; else if (c === ']') open--; }
+    return MMLPlayer.parse(src + ']1'.repeat(Math.max(0, open)));
+  };
+  const rows = [];
+  let dur0 = null, allSame = true;
+
+  trks.forEach((tr, ti) => {
+    const mml = tr.mml;
+    const p = MMLPlayer.parse(mml, ti);
+    if (dur0 === null) dur0 = p.duration;
+    else if (Math.abs(p.duration - dur0) > 1e-6) allSame = false;
+
+    // parse が返す tempo は「最後に設定された値」なので、途中でテンポが変わるトラックでは
+    // 小節長を1つに決められない。誤った数字を出すより判定不能と言うほうがいい。
+    // 最初の t より前に音符・休符があれば、そこは既定の t120 で鳴っているので 120 も数える
+    const tempos = [...new Set((mml.match(/t\d+/gi) || []).map(s => parseInt(s.slice(1), 10)))];
+    const firstT = mml.search(/t\d/i);
+    let headDur = 0;
+    try { headDur = partial(firstT < 0 ? mml : mml.slice(0, firstT)).duration; } catch (e) { /* 途中で切れて読めなければ 0 扱い */ }
+    if (headDur > 0 && !tempos.includes(120)) tempos.unshift(120);
+    if (tempos.length > 1) {
+      rows.push({ ch: ti + 1, notes: p.notes.length, sec: p.duration, multiTempo: tempos });
+      return;
+    }
+    const barSec = beatsPerBar * 60 / p.tempo;
+    const bars = p.duration / barSec;
+
+    // 小節線に乗っていない箇所を数え、最初の1つを覚えておく（ズレの起点が分かればいい）。
+    // 行ではなく | 区切りごとに見るので、1行に複数小節書いていても位置を絞れる
+    let strays = 0, first = null, acc = '';
+    tr.lines.forEach(l => {
+      l.text.split('|').forEach((part, pi, arr) => {
+        acc += ' ' + part;
+        if (!part.trim()) return;
+        let q;
+        try { q = partial(acc); } catch (e) { return; }
+        const b = q.duration / barSec;
+        if (!whole(b)) {
+          strays++;
+          if (!first) first = { no: l.no, part: arr.length > 1 ? pi + 1 : 0, bars: b };
+        }
+      });
+    });
+    rows.push({ ch: ti + 1, bars, notes: p.notes.length, tempo: p.tempo, ok: whole(bars), strays, first });
+  });
+  return { rows, allSame };
+}
+
+document.getElementById('checkBars').addEventListener('click', () => {
+  error.textContent = '';
+  const rep = document.getElementById('barReport');
+  const beats = Math.max(1, parseInt(document.getElementById('barBeats').value, 10) || 4);
+  localStorage.setItem('mmlforge8-barbeats', String(beats));
+  let r;
+  try {
+    r = barCheck(beats);
+  } catch (e) {
+    rep.textContent = '';
+    error.textContent = '小節チェックの前にMMLのエラーを直してください — ' + locateError(e, parseTrackBlocks(ta.value));
+    return;
+  }
+  if (!r.rows.length) { rep.textContent = ''; status.textContent = 'チェックするトラックがありません'; return; }
+
+  const bad = (s) => `<span class="ng">${s}</span>`;
+  const out = [`1小節 = ${beats}拍 として判定`];
+  r.rows.forEach(x => {
+    if (x.multiTempo) {
+      out.push(`ch${x.ch}  ${x.sec.toFixed(3)}秒  ${x.notes}音`
+        + bad(`  ← テンポが変わる（t${x.multiTempo.join(' / t')}）ので小節数を判定できません`));
+      return;
+    }
+    let line = `ch${x.ch}  ${x.bars.toFixed(3)}小節  t${x.tempo}  ${x.notes}音`;
+    if (!x.ok) line += bad('  ← 小節の整数倍になっていません');
+    if (x.strays) {
+      const where = `${x.first.no}行目` + (x.first.part ? `の${x.first.part}つ目` : '');
+      const s = `  小節線に乗らない箇所 ${x.strays}件（最初は${where}・${x.first.bars.toFixed(3)}小節の位置）`;
+      line += x.ok ? `\n   ${s}` : bad(`\n   ${s}`);
+    }
+    out.push(line);
+  });
+  out.push(r.allSame ? '全トラック同尺: OK' : bad('全トラック同尺: NG ← トラックごとに長さが違います'));
+  rep.innerHTML = out.join('\n');
+  const ng = r.rows.some(x => x.multiTempo || !x.ok) || !r.allSame;
+  status.textContent = ng ? '小節チェック: 要確認' : '小節チェック: 問題なし';
+});
+
 // mml.js に渡せる形（コメント除去済み・1行=1トラック）でクリップボードへ。
 // mml.js が読み飛ばすのは空白・タブ・改行・| だけなので、エディタ側の記法（コメント・継続行）は
 // ここで潰しておく必要がある
