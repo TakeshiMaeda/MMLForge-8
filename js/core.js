@@ -437,8 +437,9 @@ function barCheck(beatsPerBar) {
     const barSec = beatsPerBar * 60 / p.tempo;
     const bars = played / barSec;
 
-    // 無限ループの内訳。本体の長さがループ区間長の約数でないと敷き詰めが途中で切れ、
-    // 繋ぎ目で崩れる（mml.js の _parse のコメント「本体の長さはループ区間長の約数に」に対応）
+    // 無限ループの内訳。無限ループは曲末で打ち切られるので長さは必ず曲と揃う（同尺NGにはならない）。
+    // 本体の長さがループ区間長の約数でないと、繋ぎ目で本体の途中から頭に戻って並びが変わる。
+    // 長さの誤りではなく書き手の意図次第なので、内訳として示すだけで要確認にはしない
     let loop = null;
     if (p.loopStart !== null) {
       const bodyLen = p.duration - p.loopStart;
@@ -471,7 +472,7 @@ function barCheck(beatsPerBar) {
     });
     rows.push({
       ch: ti + 1, bars, notes: p.notes.length, tempo: p.tempo, loop,
-      ok: whole(bars) && (!loop || loop.fit), strays, first,
+      ok: whole(bars), strays, first,
     });
   });
   return { rows, allSame };
@@ -503,10 +504,10 @@ document.getElementById('checkBars').addEventListener('click', () => {
     let line = `ch${x.ch}  ${x.bars.toFixed(3)}小節  t${x.tempo}  ${x.notes}音`;
     if (x.loop) {   // 無限ループは「前奏 + 本体×回数」の内訳を添える（1音でも曲末まで敷き詰まるため）
       const intro = x.loop.introBars > 1e-6 ? `前奏${x.loop.introBars.toFixed(3)}小節 + ` : '';
-      line += `  （[ ]0 ${intro}本体${x.loop.bodyBars.toFixed(3)}小節 × ${x.loop.times.toFixed(3)}回）`;
+      const cut = x.loop.fit ? '' : '・曲末で途中まで';
+      line += `  （[ ]0 ${intro}本体${x.loop.bodyBars.toFixed(3)}小節 × ${x.loop.times.toFixed(3)}回${cut}）`;
     }
     if (Math.abs(x.bars - Math.round(x.bars)) > 1e-6) line += bad('  ← 小節の整数倍になっていません');
-    if (x.loop && !x.loop.fit) line += bad('  ← ループ本体が曲の長さを割り切れません（敷き詰めが途中で切れます）');
     if (x.strays) {
       const where = `${x.first.no}行目` + (x.first.part ? `の${x.first.part}つ目` : '');
       const s = `  小節線に乗らない箇所 ${x.strays}件（最初は${where}・${x.first.bars.toFixed(3)}小節の位置）`;
