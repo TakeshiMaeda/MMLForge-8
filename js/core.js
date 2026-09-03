@@ -407,14 +407,20 @@ function barCheck(beatsPerBar) {
     for (const c of src) { if (c === '[') open++; else if (c === ']') open--; }
     return MMLPlayer.parse(src + ']1'.repeat(Math.max(0, open)));
   };
+  // 曲の長さとループ開始点は mml.js の _parse と同じ決め方にする。無限ループ [ ]0 のトラックは
+  // 本体が曲末まで敷き詰められて鳴るので、「書いた長さ」ではなく「敷き詰めた後に鳴る長さ」で
+  // 判定しないと同尺を誤る（gggggggg と [c] は同じだけ鳴るのに「長さが違う」と言ってしまう）
+  const parsed = trks.map((tr, ti) => MMLPlayer.parse(tr.mml, ti));
+  const songDur = parsed.reduce((d, q) => Math.max(d, q.duration), 0);
+  const songLoop = parsed.reduce((x, q) => (q.loopStart === null ? x : Math.max(x, q.loopStart)), 0);
   const rows = [];
-  let dur0 = null, allSame = true;
+  let allSame = true;
 
   trks.forEach((tr, ti) => {
     const mml = tr.mml;
-    const p = MMLPlayer.parse(mml, ti);
-    if (dur0 === null) dur0 = p.duration;
-    else if (Math.abs(p.duration - dur0) > 1e-6) allSame = false;
+    const p = parsed[ti];
+    const played = p.loopStart === null ? p.duration : songDur;   // 実際に鳴る長さ
+    if (Math.abs(played - songDur) > 1e-6) allSame = false;
 
     // parse が返す tempo は「最後に設定された値」なので、途中でテンポが変わるトラックでは
     // 小節長を1つに決められない。誤った数字を出すより判定不能と言うほうがいい。
@@ -425,16 +431,32 @@ function barCheck(beatsPerBar) {
     try { headDur = partial(firstT < 0 ? mml : mml.slice(0, firstT)).duration; } catch (e) { /* 途中で切れて読めなければ 0 扱い */ }
     if (headDur > 0 && !tempos.includes(120)) tempos.unshift(120);
     if (tempos.length > 1) {
-      rows.push({ ch: ti + 1, notes: p.notes.length, sec: p.duration, multiTempo: tempos });
+      rows.push({ ch: ti + 1, notes: p.notes.length, sec: played, multiTempo: tempos });
       return;
     }
     const barSec = beatsPerBar * 60 / p.tempo;
-    const bars = p.duration / barSec;
+    const bars = played / barSec;
+
+    // 無限ループの内訳。本体の長さがループ区間長の約数でないと敷き詰めが途中で切れ、
+    // 繋ぎ目で崩れる（mml.js の _parse のコメント「本体の長さはループ区間長の約数に」に対応）
+    let loop = null;
+    if (p.loopStart !== null) {
+      const bodyLen = p.duration - p.loopStart;
+      const times = bodyLen > 1e-9 ? (songDur - songLoop) / bodyLen : 0;
+      loop = {
+        introBars: p.loopStart / barSec,
+        bodyBars: bodyLen / barSec,
+        times,
+        fit: bodyLen > 1e-9 && whole(times),
+      };
+    }
 
     // 小節線に乗っていない箇所を数え、最初の1つを覚えておく（ズレの起点が分かればいい）。
     // 行ではなく | 区切りごとに見るので、1行に複数小節書いていても位置を絞れる
+    // 1小節に満たないループ本体（ドラムの1拍パターン等）は、1回ごとに小節線から外れて
+    // 当たり前なので数えない。繰り返しの単位そのものなので崩れの手がかりにならない
     let strays = 0, first = null, acc = '';
-    tr.lines.forEach(l => {
+    if (!loop || whole(loop.bodyBars)) tr.lines.forEach(l => {
       l.text.split('|').forEach((part, pi, arr) => {
         acc += ' ' + part;
         if (!part.trim()) return;
@@ -447,7 +469,10 @@ function barCheck(beatsPerBar) {
         }
       });
     });
-    rows.push({ ch: ti + 1, bars, notes: p.notes.length, tempo: p.tempo, ok: whole(bars), strays, first });
+    rows.push({
+      ch: ti + 1, bars, notes: p.notes.length, tempo: p.tempo, loop,
+      ok: whole(bars) && (!loop || loop.fit), strays, first,
+    });
   });
   return { rows, allSame };
 }
@@ -476,7 +501,12 @@ document.getElementById('checkBars').addEventListener('click', () => {
       return;
     }
     let line = `ch${x.ch}  ${x.bars.toFixed(3)}小節  t${x.tempo}  ${x.notes}音`;
-    if (!x.ok) line += bad('  ← 小節の整数倍になっていません');
+    if (x.loop) {   // 無限ループは「前奏 + 本体×回数」の内訳を添える（1音でも曲末まで敷き詰まるため）
+      const intro = x.loop.introBars > 1e-6 ? `前奏${x.loop.introBars.toFixed(3)}小節 + ` : '';
+      line += `  （[ ]0 ${intro}本体${x.loop.bodyBars.toFixed(3)}小節 × ${x.loop.times.toFixed(3)}回）`;
+    }
+    if (Math.abs(x.bars - Math.round(x.bars)) > 1e-6) line += bad('  ← 小節の整数倍になっていません');
+    if (x.loop && !x.loop.fit) line += bad('  ← ループ本体が曲の長さを割り切れません（敷き詰めが途中で切れます）');
     if (x.strays) {
       const where = `${x.first.no}行目` + (x.first.part ? `の${x.first.part}つ目` : '');
       const s = `  小節線に乗らない箇所 ${x.strays}件（最初は${where}・${x.first.bars.toFixed(3)}小節の位置）`;

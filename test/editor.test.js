@@ -73,6 +73,45 @@ module.exports = {
     ok(!r.rows[0].strays, '小節線から外れた箇所は無い');
     eq(r.rows[0].bars, 3, '前奏1小節+本体2小節');
   },
+  // ── 無限ループ [ ]0 は再生時に曲末まで敷き詰められる（mml.js の _parse）ので、
+  //    小節チェックも「敷き詰めた後に鳴る長さ」で判定する ──
+  '無限ループのトラックは曲末まで敷き詰められるので同尺と判定される'() {
+    // ch1 は2小節。ch2 は音符1つだが、曲末まで8回敷き詰められて同じ2小節ぶん鳴る
+    const r = check('t120 l4 gggggggg\n\nt120 l4 [c]', 4);
+    eq(r.rows[0].bars, 2);
+    eq(r.rows[1].bars, 2, '書いた長さ(0.25小節)ではなく敷き詰め後の長さ');
+    ok(r.rows[1].ok, '小節の整数倍');
+    ok(r.allSame, '同尺');
+  },
+  'ループ本体の長さと繰り返し回数を報告する'() {
+    const r = check('t120 l4 gggggggg\n\nt120 l4 [c]', 4);
+    eq(r.rows[0].loop, null, '無限ループを使わないトラックは loop 情報なし');
+    near(r.rows[1].loop.bodyBars, 0.25, 'ループ本体は0.25小節');
+    near(r.rows[1].loop.times, 8, '8回で曲末まで埋まる');
+    ok(r.rows[1].loop.fit, 'ちょうど割り切れる');
+  },
+  'ループ本体が曲の長さを割り切れないと要確認にする'() {
+    // 本体は3拍。4拍×2小節の曲に敷き詰めると途中で切れるので、繋ぎ目で崩れる
+    const r = check('t120 l4 gggggggg\n\nt120 l4 [c c c]', 4);
+    ok(!r.rows[1].loop.fit, '割り切れない');
+    ok(!r.rows[1].ok, '要確認として出す');
+    near(r.rows[1].loop.times, 8 / 3, '割り切れない回数');
+  },
+  '前奏つきの無限ループは前奏と本体を分けて報告する'() {
+    const r = check('t120 l4 c d e f\n  [ g a b >c | <c d e f ]0\nt120 l4 c d e f | g a b >c | c d e f', 4);
+    eq(r.rows[0].bars, 3);
+    ok(r.rows[0].ok);
+    ok(r.allSame, '前奏1小節+本体2小節 = 3小節で揃う');
+    near(r.rows[0].loop.introBars, 1, '前奏は1小節');
+    near(r.rows[0].loop.bodyBars, 2, 'ループ本体は2小節');
+    ok(r.rows[0].loop.fit);
+  },
+  '1小節に満たないループ本体は小節線チェックの対象外（繰り返しの単位なので）'() {
+    // [c] は0.25小節。1回ごとに小節線から外れるのは当たり前なので件数に数えない
+    const r = check('t120 l4 gggggggg\n\nt120 l4 [c]', 4);
+    eq(r.rows[1].strays, 0);
+  },
+
   '6/8 は1小節3拍として数える'() {
     const r = check('t175 l8 c d e f g a | c d e f g a', 3);
     near(r.rows[0].bars, 2);
