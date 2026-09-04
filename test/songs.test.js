@@ -36,14 +36,7 @@ module.exports = {
   },
 
   'elven-morning: エコー(ch6)はハープ(ch3)を32分ずらした複製'() {
-    const blocks = [];
-    let cur = null;
-    const { stripComments } = loadCore(P);
-    stripComments(song('elven-morning.mml')).split('\n').forEach(line => {
-      const t = line.trim();
-      if (!t) return;
-      if (/^[ \t]/.test(line) && cur) cur.mml += ' ' + t; else { cur = { mml: t }; blocks.push(cur); }
-    });
+    const blocks = parseTrackBlocks(song('elven-morning.mml'));
     const harp = P.parse(blocks[2].mml).notes;
     const echo = P.parse(blocks[5].mml).notes;
     eq(echo.length, harp.length, '音数は同じ');
@@ -61,15 +54,7 @@ module.exports = {
   },
 
   'elven-morning: 前奏の後にループ開始点がある'() {
-    ta.value = song('elven-morning.mml');
-    const { stripComments } = loadCore(P);
-    const blocks = [];
-    let cur = null;
-    stripComments(ta.value).split('\n').forEach(line => {
-      const t = line.trim();
-      if (!t) return;
-      if (/^[ \t]/.test(line) && cur) cur.mml += ' ' + t; else { cur = { mml: t }; blocks.push(cur); }
-    });
+    const blocks = parseTrackBlocks(song('elven-morning.mml'));
     const bar = 3 * 60 / 175;
     blocks.forEach((b, i) => {
       const p = P.parse(b.mml);

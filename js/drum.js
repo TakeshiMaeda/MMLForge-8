@@ -320,7 +320,7 @@ document.getElementById('drPlay').addEventListener('click', () => {
     MMLPlayer.play(trks, { loop: true });
     drStatus.textContent = 'パターン再生中';
   } catch (e) {
-    drStatus.textContent = e.message;
+    drStatus.textContent = e.code ? mmlMessage(e) : e.message;   // パッドのMMLは本編と別なので位置は出さない
   }
 });
 document.getElementById('drStop').addEventListener('click', () => {

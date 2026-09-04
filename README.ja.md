@@ -90,7 +90,7 @@ MMLForge-8 は、その打ち込み・試聴・自動作曲・ゲームへの組
 
 ## エンジンを自分のゲーム/アプリに組み込む
 
-`mml.js` 1ファイルをコピーして読み込むだけです（依存なし・約510行）。
+`mml.js` 1ファイルをコピーして読み込むだけです（依存なし・約560行）。
 
 ```html
 <script src="mml.js"></script>
@@ -106,15 +106,47 @@ MMLForge-8 は、その打ち込み・試聴・自動作曲・ゲームへの組
   MMLPlayer.setTrackMute(0, true);  // トラック0を即時ミュート（false で復帰。再生中に有効）
   MMLPlayer.playing;          // 再生中か
   MMLPlayer.parse('t90 cde'); // 解析のみ → { notes:[{time,dur,midi}], duration, tempo, loopStart }
-                              // 第2引数にトラック番号(0始まり)を渡すとエラー文言の「トラックN」に使う
+                              // 第2引数にトラック番号(0始まり)を渡すとエラーの track に入る
+  MMLPlayer.MMLError;         // エラーの型（instanceof で判別できる）
 </script>
 ```
 
+```js
+// 記法エラーの受け取り方（mml.js は文言を持たないので、表示は自分のアプリの言葉で作る）
+try {
+  MMLPlayer.play(tracks);
+} catch (e) {
+  if (e instanceof MMLPlayer.MMLError) {
+    console.log(e.code);    // 'BAD_CHAR' … エラーの種類
+    console.log(e.params);  // { char: '%' } … 文言に埋める値
+    console.log(e.track);   // 0 … 何本目のトラックか（曲全体のエラーは null）
+    console.log(e.pos);     // 4 … 渡した文字列の中の位置（1始まり）
+  }
+}
+```
+
+`code` の一覧（この25個が外向きの約束です。`params` の欄が空のものは埋める値なし）:
+
+| 分類 | code | params |
+|---|---|---|
+| 文字・音長 | `BAD_CHAR` / `LEN_MIN` | `char` / — |
+| 引数の区切り | `COMMA_REQUIRED` | `label`（`m` `@e` `@b`） |
+| リピート上限 | `TOO_MANY_STEPS` | `max` |
+| タイ `&` | `TIE_NO_PREV` / `TIE_NO_NEXT` / `TIE_REST` | — |
+| 括弧・ループ | `UNMATCHED_OPEN` / `UNMATCHED_CLOSE` / `LOOP_NOT_LAST` / `LOOP_EMPTY` | — |
+| 単独コマンド | `O_RANGE` / `OCT_OVER` / `OCT_UNDER` / `L_ARG` / `T_ARG` / `V_RANGE` / `Q_RANGE` / `P_ARG` | — |
+| 複数値コマンド | `M_ARGS` / `E_ARGS` / `E_SUSTAIN` / `B_ARGS` | — |
+| 音色 | `WAVE_RANGE` | `max` |
+| 再生 | `NO_NOTES` | — |
+
 - 再生は lookahead 方式のスケジューラで、テンポが揺れません
-- `play()` はパース失敗時に位置つきの `Error` を投げます（再生中の曲は守られます）。文言は
-  `トラックN 位置M: 内容`（N は1始まり、M は渡した文字列の中の位置で1始まり。リピート `[ ]n` の
-  後ろでも展開後ではなく書いたままの位置）で、同じ値を `Error` の `track`（0始まり）と `pos` でも持ちます
-- 音符も休符も無いものを `play()` すると `演奏する音符がありません` の `Error` になります
+- `play()` はパース失敗時に `MMLError` を投げます（再生中の曲は守られます）。**表示用の文言は持ちません**。
+  どの言語のアプリからでも使えるよう、種類を表す `code` と、文言に埋める値 `params` だけを渡します
+  （`message` は `code` と同じ文字列）。`pos` は渡した文字列の中の位置で、リピート `[ ]n` の後ろでも
+  展開後ではなく書いたままの位置を指します
+- 文言はアプリ側で `code` から作ります。このリポジトリでは `js/mml-messages.js` が日本語の表を持ち、
+  `js/core.js` の `locateError` が行と桁を付けて `トラック2 3行目 5文字目: 解釈できない文字です: "%"` にしています
+- 音符も休符も無いものを `play()` すると `code` が `NO_NOTES` の `MMLError` になります（`track` `pos` は `null`）
 - ループ再生OFFのときは、曲の尺と最後の音のリリースが終わってから自動で止まります。`stop()` は
   短くフェードしてから音を切ります（クリックノイズ対策）
 
@@ -214,7 +246,8 @@ node test/run.js parser     # 名前で絞り込み
 見ているのは**数えられるもの**だけです。
 
 - MML記法の正常系（音長・オクターブ・リピート・`&` `m` `p` `@b`）
-- **エラーの文言と位置**。`トラック1 位置4: 解釈できない文字です: "%"` の形はUIにそのまま出る外向きの約束なので、全文で固定しています。位置は必ず原文の文字位置（リピートの後ろでもずれない）
+- **エラーのコードと位置**。`mml.js` が投げる `code` と `pos` は外向きの約束なので固定しています。位置は必ず原文の文字位置（リピートの後ろでもずれない）
+- **エラーコードと文言表の同期**。`mml.js` のソースからコードを拾い、`js/mml-messages.js` に文言があるかを突き合わせます（片方だけ増やすと落ちます）
 - エディタ側のテキスト処理（コメント除去・トラック分割・小節チェック）
 - `songs/*.mml` の尺・小節数・トラック同尺
 

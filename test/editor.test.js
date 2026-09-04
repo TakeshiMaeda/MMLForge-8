@@ -45,6 +45,51 @@ module.exports = {
     eq(b[0].mml, 't120 c d');
   },
 
+  'ブロックは属する行の番号(1始まり)と内容を持つ'() {
+    const b = parseTrackBlocks('t120 c\n; メモ\n\n  d ; x\nt120 e');
+    eq(b[0].lines, [{ no: 1, text: 't120 c' }, { no: 4, text: 'd' }], 'コメントと空行は除かれる');
+    eq(b[1].lines, [{ no: 5, text: 't120 e' }]);
+    eq([b[0].start, b[0].end], [0, 3], 'start/end は0始まりの行インデックス');
+  },
+
+  // ── エラー位置を原文の行と文字位置に直す ──
+  '連結後の位置を元の行と文字位置に戻せる'() {
+    const b = parseTrackBlocks('t120 c\n  d %')[0];   // 連結後は "t120 c d %"（% は10文字目）
+    eq(trackPos(b, 10), { line: 2, col: 5 }, '2行目の5文字目（行頭の空白も数える）');
+    eq(trackPos(b, 1), { line: 1, col: 1 });
+    eq(trackPos(b, 8), { line: 2, col: 3 }, 'd は2行目3文字目');
+  },
+  'コメントを挟んでも行と文字位置は原文のまま'() {
+    // 3行目 "  d /* x */ %" の % は13文字目（コメントを空白化しても桁は動かない）
+    const b = parseTrackBlocks('/* a */ t120 c\n; memo\n  d /* x */ %')[0];
+    eq(trackPos(b, b.mml.indexOf('%') + 1), { line: 3, col: 13 });
+  },
+  'mml.js のエラーを「トラックN L行目 C文字目」に直す'() {
+    const text = 't120 c\nt120 d\n  e %';
+    const blocks = parseTrackBlocks(text);
+    let e = null;
+    try { P.play(blocks.map(b => b.mml)); } catch (err) { e = err; }
+    ok(e, 'エラーになる');
+    eq(e.message, 'BAD_CHAR', 'mml.js 側は文言を持たない');
+    eq(locateError(e, blocks), 'トラック2 3行目 5文字目: 解釈できない文字です: "%"');
+  },
+  '曲全体のエラー（位置なし）はトラック番号を付けない'() {
+    const blocks = parseTrackBlocks('');
+    let e = null;
+    try { P.play(''); } catch (err) { e = err; }
+    eq(e.code, 'NO_NOTES');
+    eq(locateError(e, blocks), '演奏する音符がありません');
+  },
+  '文言表に無いコードでも位置は付く'() {
+    const blocks = parseTrackBlocks('t120 c\n  d %');
+    eq(locateError({ code: 'NOPE', params: {}, track: 0, pos: 10 }, blocks),
+      'トラック1 2行目 5文字目: 不明なエラー (NOPE)');
+  },
+  'mml.js 以外のエラーは message をそのまま返す'() {
+    eq(locateError(new Error('メロディに音符がありません'), parseTrackBlocks('c')),
+      'メロディに音符がありません');
+  },
+
   // ── 小節チェック ──
   '正しい4/4は小節の整数倍・同尺と判定される'() {
     const r = check('t120 l4 c d e f | g a b >c\nt120 l4 o3 c2 g2 | c2 g2', 4);

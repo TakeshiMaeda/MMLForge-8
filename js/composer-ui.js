@@ -50,7 +50,7 @@ function doGenerate(seed) {
     status.textContent = playStatusText(info);
   } catch (e) {
     status.textContent = '';
-    error.textContent = e.message;
+    showError(e);
   }
 }
 

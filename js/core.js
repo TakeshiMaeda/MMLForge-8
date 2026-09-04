@@ -147,13 +147,18 @@ function trackPos(block, pos) {
   return { line: pc.line + 1, col: pc.col + (i - pc.from) + 1 };
 }
 
-// mml.js のエラー「トラックN 位置M: 内容」を、エディタ上の行と文字位置「トラックN L行目 C文字目: 内容」に
-// 書き換える。位置情報の無いエラー（生成系のエラー等）はそのまま返す
+// mml.js のエラー（MMLError。文言を持たず code と位置だけ）を、エディタ上の行と文字位置つきの
+// 日本語にする。文言は js/mml-messages.js が持つ。
+//   トラック2 3行目 5文字目: 解釈できない文字です: "%"
+// mml.js 以外のエラー（作曲エンジン等、最初から日本語の message を持つもの）はそのまま返す
 function locateError(e, blocks) {
-  const b = blocks[e.track];
-  if (!b || !(e.pos > 0)) return e.message;
+  if (!e.code) return e.message;
+  const body = mmlMessage(e);
+  const b = (e.track === null || e.track === undefined) ? null : blocks[e.track];
+  if (!b) return body;                                   // 曲全体のエラー（NO_NOTES）
+  if (!(e.pos > 0)) return `トラック${e.track + 1}: ${body}`;
   const { line, col } = trackPos(b, e.pos);
-  return e.message.replace(/^トラック\d+ 位置\d+: /, `トラック${e.track + 1} ${line}行目 ${col}文字目: `);
+  return `トラック${e.track + 1} ${line}行目 ${col}文字目: ${body}`;
 }
 
 // エラー欄に出す。MMLの記法エラーなら原文の行と文字位置に直す
@@ -379,7 +384,8 @@ document.getElementById('optMml').addEventListener('click', () => {
   try {
     res = optimizeMML(text, selFrom, selTo);
   } catch (e) {
-    error.textContent = '最適化を中止しました（内容は変えていません） — ' + e.message;
+    error.textContent = '最適化を中止しました（内容は変えていません） — '
+      + locateError(e, parseTrackBlocks(text));
     return;
   }
   if (!res) { status.textContent = '縮められる記述はありませんでした'; return; }

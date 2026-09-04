@@ -40,8 +40,12 @@
 //   |               小節区切り（無視される。見た目整理用）
 //   スペース・改行   無視
 //
-// 記法エラーは「トラックN 位置M: 内容」という message の Error を投げる（N は1始まり、M は原文の
-// 文字位置で1始まり）。同じ値を Error の track（0始まり）と pos プロパティでも持つ
+// 記法エラーは MMLError を投げる。表示用の文言は持たない（言語に依存させないため）:
+//   code   … エラーの種類を表す識別子（'BAD_CHAR' 'O_RANGE' など。message も同じ値）
+//   params … 文言に埋める値（{ char } { max } { label }）。MMLの記号と数値だけ
+//   track  … 0始まりのトラック番号。曲全体のエラー（NO_NOTES）は null
+//   pos    … 1始まりの「原文」の文字位置。リピート [ ]n の後ろでも展開後の位置にはならない
+// 文言は利用側で code から作る（このリポジトリでは js/mml-messages.js が持つ）
 const MMLPlayer = (() => {
   let _ctx        = null;
   let _masterGain = null;
@@ -69,6 +73,18 @@ const MMLPlayer = (() => {
   // 1トラックの音符+休符の上限。リピートのタイプミス（[[[c]99]99]99 等）でブラウザが固まるのを防ぐ。
   // 1音あたり約570B なので 100万で約0.6GB・パース約0.4秒
   const MAX_STEPS = 1000000;
+
+  // エラー。mml.js は文言を持たない（言語非依存）ので、種類は code、埋める値は params で伝える
+  class MMLError extends Error {
+    constructor(code, params = {}, track = null, pos = null) {
+      super(code);          // message はコードそのもの。捕まえ損ねてもコンソールで種類は分かる
+      this.name = 'MMLError';
+      this.code = code;
+      this.params = params;
+      this.track = track;   // 0始まり。曲全体のエラーは null
+      this.pos = pos;       // 1始まり・原文の文字位置。位置を持たないエラーは null
+    }
+  }
 
   function _getCtx() {
     if (!_ctx) {
@@ -114,8 +130,7 @@ const MMLPlayer = (() => {
     //   tieAt=[ の時点で & が保留中ならその繋ぎ先イベントの index（無ければ -1）
     const stack = [];
 
-    const err = (msg, at = pos) => Object.assign(
-      new Error(`トラック${ti + 1} 位置${at + 1}: ${msg}`), { track: ti, pos: at + 1 });
+    const err = (code, params = {}, at = pos) => new MMLError(code, params, ti, at + 1);
     // 値の範囲エラーは「その値の先頭」を指したいので、読んだ数値の開始位置を覚えておく
     // （数値が無かった場合は「数値があるべき場所」がそのまま入る）
     let numAt = 0;      // 直近の readInt で読んだ値の開始位置
@@ -127,7 +142,7 @@ const MMLPlayer = (() => {
       return s === '' ? null : parseInt(s, 10);
     };
     // カンマ区切りの整数を n 個読む（値の前後の空白は許す）。signed=true なら先頭の - を符号と見る
-    const readNums = (n, signed, label, needMsg) => {
+    const readNums = (n, signed, label, needCode) => {
       const out = [];
       numsAt = [];
       for (let i = 0; i < n; i++) {
@@ -136,11 +151,11 @@ const MMLPlayer = (() => {
         let sign = 1;
         if (signed && (src[pos] === '-' || src[pos] === '+')) { sign = src[pos] === '-' ? -1 : 1; pos++; }
         const v = readInt();
-        if (v === null) throw err(needMsg);
+        if (v === null) throw err(needCode);
         out.push(sign * v);
         if (i < n - 1) {
           while (pos < src.length && src[pos] === ' ') pos++;
-          if (src[pos] !== ',') throw err(`${label} の値はカンマ区切りで指定してください`);
+          if (src[pos] !== ',') throw err('COMMA_REQUIRED', { label });
           pos++;
         }
       }
@@ -148,8 +163,7 @@ const MMLPlayer = (() => {
     };
     const step = () => {
       if (++steps > MAX_STEPS) {
-        throw err(`リピートの展開が大きすぎます（音符と休符の合計が ${MAX_STEPS} を超えました）`,
-          stack.length ? stack[0].open : pos);
+        throw err('TOO_MANY_STEPS', { max: MAX_STEPS }, stack.length ? stack[0].open : pos);
       }
     };
     const readDots = () => {
@@ -161,7 +175,7 @@ const MMLPlayer = (() => {
     const readDuration = () => {
       const n = readInt();
       const base = n === null ? defLen : n;
-      if (base <= 0) throw err('音長は1以上で指定してください', numAt);
+      if (base <= 0) throw err('LEN_MIN', {}, numAt);
       let beats = 4 / base;
       let add = beats;
       const dots = readDots();
@@ -207,12 +221,12 @@ const MMLPlayer = (() => {
         }
         time += dur;
       } else if (ch === 'r') {
-        if (tie) throw err('& の後には音符が必要です（休符は繋げません）');
+        if (tie) throw err('TIE_REST');
         step();
         pos++;
         time += readDuration() * (60 / tempo);
       } else if (ch === '&') {
-        if (!evs.length) throw err('& の前に音符が必要です');
+        if (!evs.length) throw err('TIE_NO_PREV');
         tiePos = pos;
         pos++;
         tie = true;
@@ -220,16 +234,16 @@ const MMLPlayer = (() => {
         stack.push({ open: pos, body: pos + 1, iter: 0, time, tieAt: tie ? evs.length - 1 : -1 });
         pos++;
       } else if (ch === ']') {
-        if (!stack.length) throw err('] に対応する [ がありません');
+        if (!stack.length) throw err('UNMATCHED_CLOSE');
         const fr = stack[stack.length - 1];
         pos++;
         const n = readInt();
         if (n === null || n === 0) {
           // 無限ループ。後続に音符等があると「どこまでがループか」が曖昧になるため、トラック末尾のみ許可
           if (stack.length > 1 || /[^\s|]/.test(src.slice(pos))) {
-            throw err('無限ループ（数字なし・0 の [ ]）はトラックの末尾にのみ書けます（リピートの中も不可）', fr.open);
+            throw err('LOOP_NOT_LAST', {}, fr.open);
           }
-          if (time - fr.time < 0.01) throw err('無限ループの中身には音符か休符が必要です', fr.open);
+          if (time - fr.time < 0.01) throw err('LOOP_EMPTY', {}, fr.open);
           loopStart = fr.time;
           if (fr.tieAt >= 0) {
             // & がループ開始点をまたいでいる（例: c4& [d4 e4]0）。1周目は c→d と繋がった1発音だが、
@@ -254,67 +268,67 @@ const MMLPlayer = (() => {
         }
       } else if (ch === 'm') {
         pos++;
-        const [dl, rt, dp] = readNums(3, false, 'm', 'm は 遅れ,速さ,深さ の3値が必要です');
+        const [dl, rt, dp] = readNums(3, false, 'm', 'M_ARGS');
         lfo = { delay: dl / 1000, rate: rt, depth: dp };
       } else if (ch === 'p') {
         pos++;
         const n = readInt();
-        if (n === null) throw err('p の後にポルタメント時間(ミリ秒)が必要です');
+        if (n === null) throw err('P_ARG');
         porta = n / 1000;
       } else if (ch === 'o') {
         pos++;
         const n = readInt();
-        if (n === null || n > 8) throw err('o の後にオクターブ数(0-8)が必要です', numAt);
+        if (n === null || n > 8) throw err('O_RANGE', {}, numAt);
         oct = n;
       } else if (ch === '>') {
-        if (oct >= 8) throw err('> でオクターブが 8 を超えます');
+        if (oct >= 8) throw err('OCT_OVER');
         oct++; pos++;
       } else if (ch === '<') {
-        if (oct <= 0) throw err('< でオクターブが 0 を下回ります');
+        if (oct <= 0) throw err('OCT_UNDER');
         oct--; pos++;
       } else if (ch === 'l') {
         pos++;
         const n = readInt();
-        if (n === null || n <= 0) throw err('l の後に音長が必要です', numAt);
+        if (n === null || n <= 0) throw err('L_ARG', {}, numAt);
         defLen = n;
       } else if (ch === 't') {
         pos++;
         const n = readInt();
-        if (n === null || n <= 0) throw err('t の後にテンポが必要です', numAt);
+        if (n === null || n <= 0) throw err('T_ARG', {}, numAt);
         tempo = n;
       } else if (ch === 'v') {
         pos++;
         const n = readInt();
-        if (n === null || n > 15) throw err('v の後に音量(0-15)が必要です', numAt);
+        if (n === null || n > 15) throw err('V_RANGE', {}, numAt);
         vol = n;
       } else if (ch === 'q') {
         pos++;
         const n = readInt();
-        if (n === null || n < 1 || n > 8) throw err('q の後にゲート(1-8)が必要です', numAt);
+        if (n === null || n < 1 || n > 8) throw err('Q_RANGE', {}, numAt);
         q = n;
       } else if (ch === '@') {
         pos++;
         const sub = pos < src.length ? src[pos].toLowerCase() : '';
         if (sub === 'e') {
           pos++;
-          const n = readNums(4, false, '@e', '@e は attack,decay,sustain,release の4値が必要です');
-          if (n[2] > 100) throw err('@e の sustain は 0-100 で指定してください', numsAt[2]);
+          const n = readNums(4, false, '@e', 'E_ARGS');
+          if (n[2] > 100) throw err('E_SUSTAIN', {}, numsAt[2]);
           env = { a: n[0], d: n[1], s: n[2], r: n[3] };
         } else if (sub === 'b') {
           pos++;
-          const [ct, ms] = readNums(2, true, '@b', '@b は ずれ(セント),時間(ミリ秒) の2値が必要です');
+          const [ct, ms] = readNums(2, true, '@b', 'B_ARGS');
           bend = ct === 0 ? null : { cent: ct, sec: ms / 1000 };
         } else {
           const n = readInt();
-          if (n === null || n < 0 || n >= WAVES.length) throw err(`@ の後に音色番号(0-${WAVES.length - 1})が必要です`, numAt);
+          if (n === null || n < 0 || n >= WAVES.length) throw err('WAVE_RANGE', { max: WAVES.length - 1 }, numAt);
           wave = n;
         }
       } else {
-        throw err(`解釈できない文字です: "${src[pos]}"`);
+        throw err('BAD_CHAR', { char: src[pos] });
       }
     }
-    if (stack.length) throw err('[ に対応する ] がありません', stack[stack.length - 1].open);
-    if (tie) throw err('& の後には音符が必要です', tiePos);
+    if (stack.length) throw err('UNMATCHED_OPEN', {}, stack[stack.length - 1].open);
+    if (tie) throw err('TIE_NO_NEXT', {}, tiePos);
     return { evs, dur: time, tempo, loopStart };
   }
 
@@ -481,7 +495,7 @@ const MMLPlayer = (() => {
   function play(tracks, opts = {}) {
     if (typeof tracks === 'string') tracks = [tracks];
     const { events, duration, loopStart } = _parse(tracks);  // 先にパース（失敗時は現行再生を守る）
-    if (duration <= 0) throw new Error('演奏する音符がありません');
+    if (duration <= 0) throw new MMLError('NO_NOTES');
     stop();
     const c = _getCtx();
     _sessionGain = c.createGain();
@@ -537,6 +551,7 @@ const MMLPlayer = (() => {
   }
 
   return {
+    MMLError,   // 利用側が instanceof で判別できるように公開する
     play,
     stop,
     setVolume,
