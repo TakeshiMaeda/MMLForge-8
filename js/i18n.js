@@ -153,6 +153,11 @@ const TEXT = {
     'drum.playing':        'パターン再生中',
     'drum.cleared':        'クリアしました',
     'drum.inserted':       '本編末尾にトラックを追加しました',
+
+    // ── ワークスペースのウインドウ（desk.js） ──
+    'desk.help':  '説明を表示／隠す',
+    'desk.min':   '最小化（タイトルバーのダブルクリックでも）。もう一度で元に戻す',
+    'desk.close': '閉じる（上部の「ウインドウ」から開き直せます）',
   },
 
   en: {
@@ -261,6 +266,11 @@ const TEXT = {
     'drum.playing':        'Playing the pattern',
     'drum.cleared':        'Cleared',
     'drum.inserted':       'Added the tracks to the end of the main text',
+
+    // ── ワークスペースのウインドウ ──
+    'desk.help':  'Show or hide help',
+    'desk.min':   'Minimize (or double-click the title bar). Again to restore',
+    'desk.close': 'Close (reopen it from "Windows" at the top)',
   },
 };
 

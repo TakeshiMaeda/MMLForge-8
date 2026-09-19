@@ -2,320 +2,396 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MMLForge-8</title>
 <link rel="stylesheet" href="css/style.css">
 <script src="js/i18n.js"></script>
 </head>
 <body>
 <!--
+  画面は DAW 風: 上部のトランスポート / 中央のワークスペース（#desk。各機能は .win のウインドウ）/ 下部のヒントバー。
+  ウインドウの移動・大きさ・開閉は js/desk.js が扱う。ウインドウは .win-bar（タイトル）と .win-body（中身）からなり、
+  長い説明は .win-help に入れて「?」で開く。
+
   日英の出し分け: 文章は <span class="ja">…</span><span class="en">…</span>（段落は p.ja / p.en）の対で書き、
   CSS が <html lang> を見て片方を隠す。title / placeholder / <option> の中身は span が使えないので、
   日本語を書いたうえで data-title-en / data-placeholder-en / data-en に英語を並べる（js/i18n.js が差し替える）。
   id を持つ要素は複製しないこと（対にするのは中の文章だけ）。test/html.test.js が見張る
 -->
-<header class="top">
-  <h1>MMLForge-8 <span class="hint">— MML chiptune workbench</span></h1>
-  <button id="langToggle" class="lang-toggle" title="Language"><span class="ja">English</span><span class="en" lang="ja">日本語</span></button>
+<header class="transport">
+  <div class="brand">MMLForge-8 <span class="brand-sub">MML chiptune workbench</span></div>
+  <div class="tp-group">
+    <button id="play" class="tp-btn tp-play" title="再生" data-title-en="Play">▶</button>
+    <button id="stop" class="tp-btn" title="停止" data-title-en="Stop">■</button>
+    <label class="tp-toggle" title="曲の終わりで頭に戻って繰り返します" data-title-en="Go back to the start at the end of the song and repeat"><input type="checkbox" id="loop" checked> <span class="ja">ループ</span><span class="en">Loop</span></label>
+    <label class="tp-vol" title="全体の音量" data-title-en="Master volume"><span class="ja">音量</span><span class="en">Vol</span> <input type="range" id="vol" min="0" max="100" value="80"></label>
+  </div>
+  <div class="lcd"><span id="status"></span></div>
+  <div class="tp-group tp-right">
+    <div class="menu-wrap">
+      <button id="winMenuBtn" title="ウインドウの表示・非表示を切り替えます" data-title-en="Show or hide windows"><span class="ja">ウインドウ ▾</span><span class="en">Windows ▾</span></button>
+      <div id="winMenu" class="menu" hidden></div>
+    </div>
+    <button id="deskReset" title="すべてのウインドウを初期配置に戻します" data-title-en="Put every window back in its default place"><span class="ja">整列</span><span class="en">Arrange</span></button>
+    <button id="langToggle" class="lang-toggle" title="Language"><span class="ja">English</span><span class="en" lang="ja">日本語</span></button>
+  </div>
 </header>
-<p class="hint ja">行頭から始まる行 = 新トラック（複数トラックは同時再生で和音・伴奏）。行頭に空白を入れた行は前のトラックの続き（トラック内で自由に改行できます）。コメントは「;」（そこから行末まで。行の途中でも可）と /* ～ */（複数行またぎも可）の2種類で、空行とともに無視されます。行頭の /* コメント */ の直後に続けて書いた内容は継続行扱いになるので、新トラックにしたいときはコメントを前の行に分けてください。内容は自動保存されます。
-下のチェックボックスで再生するチャンネルを選べます（再生中の切替は即ミュート/復帰。伴奏付け・追い足しの対象はチェックに関係なく先頭トラック）。
+
+<main id="desk" class="desk">
+
+<section class="win" id="winEditor">
+  <div class="win-bar"><span class="win-title"><span class="ja">エディタ</span><span class="en">Editor</span></span></div>
+  <div class="win-body win-editor">
+    <div class="win-help">
+      <p class="hint ja">行頭から始まる行 = 新トラック（複数トラックは同時再生で和音・伴奏）。行頭に空白を入れた行は前のトラックの続き（トラック内で自由に改行できます）。コメントは「;」（そこから行末まで。行の途中でも可）と /* ～ */（複数行またぎも可）の2種類で、空行とともに無視されます。行頭の /* コメント */ の直後に続けて書いた内容は継続行扱いになるので、新トラックにしたいときはコメントを前の行に分けてください。内容は自動保存されます。
 「記述を最適化」は選択範囲（未選択なら全体）の冗長な書き方を縮めます（l と同じ音長の明示指定を削除、絶対オクターブ指定を &gt; &lt; に変換）。l 指定の無い区間に4分音符があればトラックの頭に l4 を足して数字を省きます（c4 d4 e4 f4 → l4 c d e f）。最初に出てくる o は残すので、暗黙の初期値に依存する形にはなりません。音が変わらないことを検算してから適用します。
 「mml.js用にコピー」はコメントを除去し1行=1トラックに整形してコピーします（他プロジェクトの mml.js へ持ち出す用）。</p>
-<p class="hint en">A line that starts at the left edge is a new track (tracks play together for chords and accompaniment). A line that starts with a space continues the track above, so you can break a track over as many lines as you like. Comments are ";" (to the end of the line, also mid-line) and /* ... */ (can span lines); they are ignored, as are blank lines. Text written right after a /* comment */ at the start of a line counts as a continuation line, so put the comment on its own line when you want a new track. Your text is saved automatically.
-Use the checkboxes below to choose which channels play (switching during playback mutes or unmutes at once; accompaniment and melody extension always use the first track, whatever the checkboxes say).
+      <p class="hint en">A line that starts at the left edge is a new track (tracks play together for chords and accompaniment). A line that starts with a space continues the track above, so you can break a track over as many lines as you like. Comments are ";" (to the end of the line, also mid-line) and /* ... */ (can span lines); they are ignored, as are blank lines. Text written right after a /* comment */ at the start of a line counts as a continuation line, so put the comment on its own line when you want a new track. Your text is saved automatically.
 "Optimize" shortens redundant writing in the selection, or in the whole text if nothing is selected: it removes lengths that equal the current l and turns absolute octaves into &gt; &lt;. If a part with no l has quarter notes, it adds l4 at the head of the track and drops the numbers (c4 d4 e4 f4 → l4 c d e f). The first o is kept, so the result never relies on the implicit default. It checks that the sound does not change before applying.
 "Copy for mml.js" removes comments and copies one line per track (for taking your song to mml.js in another project).</p>
-<textarea id="mml" spellcheck="false"></textarea>
-<div id="chToggles" class="controls" style="gap:10px; margin:6px 0"></div>
-<div class="controls">
-  <button id="play"><span class="ja">▶ 再生</span><span class="en">▶ Play</span></button>
-  <button id="stop"><span class="ja">■ 停止</span><span class="en">■ Stop</span></button>
-  <label><input type="checkbox" id="loop" checked> <span class="ja">ループ</span><span class="en">Loop</span></label>
-  <label><span class="ja">音量</span><span class="en">Volume</span> <input type="range" id="vol" min="0" max="100" value="80"></label>
-  <button id="optMml" title="選択範囲（未選択なら全体）の冗長な記述を縮めます。l と同じ音長の明示指定を削除し、絶対オクターブ指定を &gt; &lt; に変換します。l 指定の無い区間に4分音符があれば頭に l4 を足して省略します" data-title-en="Shortens redundant writing in the selection (or the whole text). Removes lengths that equal the current l and turns absolute octaves into &gt; &lt;. If a part with no l has quarter notes, adds l4 at the head and drops the numbers"><span class="ja">記述を最適化</span><span class="en">Optimize</span></button>
-  <button id="copyMml" title="コメントを除去し、1行=1トラックに整形してコピーします（mml.js にそのまま渡せる形）" data-title-en="Removes comments and copies one line per track (a form mml.js takes as is)"><span class="ja">mml.js用にコピー</span><span class="en">Copy for mml.js</span></button>
-  <label title="1小節が4分音符いくつぶんか。4/4なら4、3/4なら3、6/8は8分6つ＝4分3つなので3" data-title-en="How many quarter notes make one bar: 4 for 4/4, 3 for 3/4, and 3 for 6/8 (six eighths = three quarters)"><span class="ja">1小節</span><span class="en">1 bar =</span> <input type="number" id="barBeats" value="4" min="1" max="32" style="width:48px"><span class="ja">拍</span><span class="en"> beats</span></label>
-  <button id="checkBars" title="各トラックの尺が小節の整数倍か、全トラックで揃っているかを調べます。崩れている場合は小節線から外れ始めた行を示します" data-title-en="Checks that each track is a whole number of bars and that all tracks are the same length. If not, shows the line where a track first drifts off the bar lines"><span class="ja">小節チェック</span><span class="en">Check bars</span></button>
-  <span id="status"></span>
-</div>
-<div id="error"></div>
-<pre id="barReport"></pre>
+    </div>
+    <textarea id="mml" spellcheck="false"></textarea>
+    <div class="controls toolbar">
+      <button id="optMml" title="選択範囲（未選択なら全体）の冗長な記述を縮めます。l と同じ音長の明示指定を削除し、絶対オクターブ指定を &gt; &lt; に変換します。l 指定の無い区間に4分音符があれば頭に l4 を足して省略します" data-title-en="Shortens redundant writing in the selection (or the whole text). Removes lengths that equal the current l and turns absolute octaves into &gt; &lt;. If a part with no l has quarter notes, adds l4 at the head and drops the numbers"><span class="ja">記述を最適化</span><span class="en">Optimize</span></button>
+      <button id="copyMml" title="コメントを除去し、1行=1トラックに整形してコピーします（mml.js にそのまま渡せる形）" data-title-en="Removes comments and copies one line per track (a form mml.js takes as is)"><span class="ja">mml.js用にコピー</span><span class="en">Copy for mml.js</span></button>
+      <span class="sep"></span>
+      <label title="1小節が4分音符いくつぶんか。4/4なら4、3/4なら3、6/8は8分6つ＝4分3つなので3" data-title-en="How many quarter notes make one bar: 4 for 4/4, 3 for 3/4, and 3 for 6/8 (six eighths = three quarters)"><span class="ja">1小節</span><span class="en">1 bar =</span> <input type="number" id="barBeats" value="4" min="1" max="32" style="width:48px"><span class="ja">拍</span><span class="en"> beats</span></label>
+      <button id="checkBars" title="各トラックの尺が小節の整数倍か、全トラックで揃っているかを調べます。崩れている場合は小節線から外れ始めた行を示します" data-title-en="Checks that each track is a whole number of bars and that all tracks are the same length. If not, shows the line where a track first drifts off the bar lines"><span class="ja">小節チェック</span><span class="en">Check bars</span></button>
+    </div>
+    <pre id="barReport"></pre>
+  </div>
+</section>
 
-<details class="sec" id="secGen">
-<summary><span class="ja">自動作曲（ガチャ）</span><span class="en">Auto compose (gacha)</span></summary>
-<div class="controls">
-  <label><span class="ja">雰囲気</span><span class="en">Mood</span> <select id="genMood"></select></label>
-  <label><span class="ja">小節</span><span class="en">Bars</span>
-    <select id="genBars">
-      <option value="4">4</option>
-      <option value="8" selected>8</option>
-      <option value="16">16</option>
-    </select>
-  </label>
-  <label><span class="ja">シード</span><span class="en">Seed</span> <input type="number" id="genSeed" value="1" min="1" style="width:90px"></label>
-  <button id="genRnd"><span class="ja">🎲 ランダム生成</span><span class="en">🎲 Random</span></button>
-  <button id="genGo"><span class="ja">この設定で生成</span><span class="en">Generate with these settings</span></button>
-  <button id="genUndo"><span class="ja">元に戻す</span><span class="en">Undo</span></button>
-</div>
-<div class="subbox">
-<div class="subttl"><span class="ja">雰囲気の上書き（未指定 = 雰囲気まかせ。生成ボタン専用）</span><span class="en">Override the mood (unset = follow the mood; generate buttons only)</span></div>
-<div class="controls">
-  <label><span class="ja">スケール</span><span class="en">Scale</span>
-    <select id="genScale">
-      <option value="" selected data-en="From mood">雰囲気まかせ</option>
-      <option value="major" data-en="Bright (major)">明るい（メジャー）</option>
-      <option value="minor" data-en="Dark (minor)">暗い（マイナー）</option>
-      <option value="dorian" data-en="Floating (dorian)">浮遊（ドリアン）</option>
-    </select>
-  </label>
-  <label><span class="ja">激しさ</span><span class="en">Intensity</span>
-    <select id="genDensity">
-      <option value="" selected data-en="From mood">雰囲気まかせ</option>
-      <option value="0" data-en="Gentle">おだやか</option>
-      <option value="1" data-en="Normal">ふつう</option>
-      <option value="2" data-en="Intense">はげしい</option>
-    </select>
-  </label>
-  <label><span class="ja">キー</span><span class="en">Key</span> <select id="genKey"><option value="" selected data-en="From mood">雰囲気まかせ</option></select></label>
-  <label><span class="ja">テンポ</span><span class="en">Tempo</span> <input type="number" id="genTempo" min="40" max="300" style="width:70px" placeholder="自動" data-placeholder-en="Auto"></label>
-</div>
-<div class="controls">
-  <label><span class="ja">リズムch</span><span class="en">Rhythm ch</span>
-    <select id="genDrums">
-      <option value="" selected data-en="From mood">雰囲気まかせ</option>
-      <option value="hard" data-en="On (hard)">あり（強め）</option>
-      <option value="soft" data-en="On (soft)">あり（控えめ）</option>
-      <option value="off" data-en="Off">なし</option>
-    </select>
-  </label>
-  <label><span class="ja">ハーモニー</span><span class="en">Harmony</span>
-    <select id="genHarm">
-      <option value="" selected data-en="From mood">雰囲気まかせ</option>
-      <option value="on" data-en="On">あり</option>
-      <option value="off" data-en="Off">なし</option>
-    </select>
-  </label>
-</div>
-</div>
-<p class="hint ja">雰囲気はスケール・テンポ・激しさ・音色などの「初期値セット」です。各パラメータを指定すると雰囲気の設定を個別に上書きできます（テンポだけ指定すれば、同じシードの同じ曲を速さ違いで鳴らせます）。
+<section class="win" id="winCh">
+  <div class="win-bar"><span class="win-title"><span class="ja">チャンネル</span><span class="en">Channels</span></span></div>
+  <div class="win-body">
+    <div class="win-help">
+      <p class="hint ja">チェックしたチャンネルだけ鳴ります（再生中の切替は即ミュート/復帰）。伴奏付け・追い足しの対象はチェックに関係なく先頭トラックです。</p>
+      <p class="hint en">Only checked channels play (switching during playback mutes or unmutes at once). Accompaniment and melody extension always use the first track, whatever the checkboxes say.</p>
+    </div>
+    <div id="chToggles" class="ch-list"></div>
+  </div>
+</section>
+
+<section class="win" id="winGen">
+  <div class="win-bar"><span class="win-title"><span class="ja">自動作曲（ガチャ）</span><span class="en">Auto compose (gacha)</span></span></div>
+  <div class="win-body">
+    <div class="win-help">
+      <p class="hint ja">雰囲気はスケール・テンポ・激しさ・音色などの「初期値セット」です。各パラメータを指定すると雰囲気の設定を個別に上書きできます（テンポだけ指定すれば、同じシードの同じ曲を速さ違いで鳴らせます）。
 生成するとテキストエリアを置き換えて即再生します（「元に戻す」で直前の内容と入れ替え）。気に入った曲はシード値と設定で再現できます。生成後に手で編集して仕上げるのも有効です。</p>
-<p class="hint en">A mood is a starting set of scale, tempo, intensity, sounds and so on. Set any parameter to override that part of the mood (set only the tempo to hear the same seed's song at a different speed).
+      <p class="hint en">A mood is a starting set of scale, tempo, intensity, sounds and so on. Set any parameter to override that part of the mood (set only the tempo to hear the same seed's song at a different speed).
 Generating replaces the text area and plays at once ("Undo" swaps it with the previous text). You can reproduce a song you like from its seed and settings. Finishing it by hand afterwards works well too.</p>
-<div class="grp"><span class="ja">伴奏付け（先頭トラックのメロディ対象）</span><span class="en">Add accompaniment (to the melody in the first track)</span></div>
-<div class="controls">
-  <label><span class="ja">雰囲気</span><span class="en">Mood</span> <select id="harmMood"></select></label>
-  <label><span class="ja">リズムch</span><span class="en">Rhythm ch</span>
-    <select id="harmDrums">
-      <option value="" selected data-en="From mood">雰囲気まかせ</option>
-      <option value="hard" data-en="On (hard)">あり（強め）</option>
-      <option value="soft" data-en="On (soft)">あり（控えめ）</option>
-      <option value="off" data-en="Off">なし</option>
-    </select>
-  </label>
-  <label><span class="ja">ハーモニー</span><span class="en">Harmony</span>
-    <select id="harmHarm">
-      <option value="" selected data-en="From mood">雰囲気まかせ</option>
-      <option value="on" data-en="On">あり</option>
-      <option value="off" data-en="Off">なし</option>
-    </select>
-  </label>
-  <label><span class="ja">シード</span><span class="en">Seed</span> <input type="number" id="harmSeed" value="1" min="1" style="width:90px"></label>
-  <button id="harmRnd"><span class="ja">🎲 ランダム伴奏付け</span><span class="en">🎲 Random accompaniment</span></button>
-  <button id="harmGo"><span class="ja">♪ この設定で伴奏付け</span><span class="en">♪ Accompany with these settings</span></button>
-</div>
-<p class="hint ja">先頭トラック（最初のコメント以外のブロック）をメロディとみなし、キーとコード進行を推定してベース・アルペジオ等の伴奏を生成します。スケール・キー・テンポはメロディから推定するため設定はありません。雰囲気は伴奏の音色・パターンに使います。鍵盤録音や音声採譜のMMLにもどうぞ。</p>
-<p class="hint en">Treats the first track (the first block that is not a comment) as the melody, estimates its key and chord progression, and generates bass, arpeggio and other accompaniment. The scale, key and tempo come from the melody, so there are no settings for them. The mood sets the accompaniment's sounds and patterns. Works on MML from the keyboard recorder or audio transcription too.</p>
+    </div>
+    <div class="controls">
+      <label><span class="ja">雰囲気</span><span class="en">Mood</span> <select id="genMood"></select></label>
+      <label><span class="ja">小節</span><span class="en">Bars</span>
+        <select id="genBars">
+          <option value="4">4</option>
+          <option value="8" selected>8</option>
+          <option value="16">16</option>
+        </select>
+      </label>
+      <label><span class="ja">シード</span><span class="en">Seed</span> <input type="number" id="genSeed" value="1" min="1" style="width:90px"></label>
+    </div>
+    <div class="controls">
+      <button id="genRnd" class="primary"><span class="ja">🎲 ランダム生成</span><span class="en">🎲 Random</span></button>
+      <button id="genGo"><span class="ja">この設定で生成</span><span class="en">Generate with these settings</span></button>
+      <button id="genUndo"><span class="ja">元に戻す</span><span class="en">Undo</span></button>
+    </div>
+    <div class="subbox">
+      <div class="subttl"><span class="ja">雰囲気の上書き（未指定 = 雰囲気まかせ。生成ボタン専用）</span><span class="en">Override the mood (unset = follow the mood; generate buttons only)</span></div>
+      <div class="controls">
+        <label><span class="ja">スケール</span><span class="en">Scale</span>
+          <select id="genScale">
+            <option value="" selected data-en="From mood">雰囲気まかせ</option>
+            <option value="major" data-en="Bright (major)">明るい（メジャー）</option>
+            <option value="minor" data-en="Dark (minor)">暗い（マイナー）</option>
+            <option value="dorian" data-en="Floating (dorian)">浮遊（ドリアン）</option>
+          </select>
+        </label>
+        <label><span class="ja">激しさ</span><span class="en">Intensity</span>
+          <select id="genDensity">
+            <option value="" selected data-en="From mood">雰囲気まかせ</option>
+            <option value="0" data-en="Gentle">おだやか</option>
+            <option value="1" data-en="Normal">ふつう</option>
+            <option value="2" data-en="Intense">はげしい</option>
+          </select>
+        </label>
+        <label><span class="ja">キー</span><span class="en">Key</span> <select id="genKey"><option value="" selected data-en="From mood">雰囲気まかせ</option></select></label>
+        <label><span class="ja">テンポ</span><span class="en">Tempo</span> <input type="number" id="genTempo" min="40" max="300" style="width:70px" placeholder="自動" data-placeholder-en="Auto"></label>
+        <label><span class="ja">リズムch</span><span class="en">Rhythm ch</span>
+          <select id="genDrums">
+            <option value="" selected data-en="From mood">雰囲気まかせ</option>
+            <option value="hard" data-en="On (hard)">あり（強め）</option>
+            <option value="soft" data-en="On (soft)">あり（控えめ）</option>
+            <option value="off" data-en="Off">なし</option>
+          </select>
+        </label>
+        <label><span class="ja">ハーモニー</span><span class="en">Harmony</span>
+          <select id="genHarm">
+            <option value="" selected data-en="From mood">雰囲気まかせ</option>
+            <option value="on" data-en="On">あり</option>
+            <option value="off" data-en="Off">なし</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </div>
+</section>
 
-<div class="grp"><span class="ja">メロディ追い足し（先頭トラックのメロディ対象）</span><span class="en">Extend the melody (the melody in the first track)</span></div>
-<div class="controls">
-  <label><span class="ja">激しさ</span><span class="en">Intensity</span>
-    <select id="extDensity">
-      <option value="" selected data-en="From the melody">メロディから推定</option>
-      <option value="0" data-en="Gentle">おだやか</option>
-      <option value="1" data-en="Normal">ふつう</option>
-      <option value="2" data-en="Intense">はげしい</option>
-    </select>
-  </label>
-  <label><span class="ja">スケール</span><span class="en">Scale</span>
-    <select id="extScale">
-      <option value="" selected data-en="Match the melody">メロディに合わせる</option>
-      <option value="major" data-en="Brighter (major)">明るく（メジャー）</option>
-      <option value="minor" data-en="Darker (minor)">暗く（マイナー）</option>
-      <option value="dorian" data-en="Floating (dorian)">浮遊（ドリアン）</option>
-    </select>
-  </label>
-  <label><span class="ja">オクターブ</span><span class="en">Octave</span>
-    <select id="extOct">
-      <option value="0" selected data-en="Same">そのまま</option>
-      <option value="1" data-en="1 octave up">1オクターブ上</option>
-      <option value="-1" data-en="1 octave down">1オクターブ下</option>
-    </select>
-  </label>
-  <label><span class="ja">小節数</span><span class="en">Bars</span> <input type="number" id="extBars" value="1" min="1" max="8" style="width:52px"></label>
-  <label><span class="ja">シード</span><span class="en">Seed</span> <input type="number" id="extSeed" value="1" min="1" style="width:90px"></label>
-</div>
-<div class="controls">
-  <label><input type="checkbox" id="extBuild"> <span class="ja">盛り上げ（小節ごとに激しく）</span><span class="en">Build up (more intense each bar)</span></label>
-  <label><input type="checkbox" id="extCadence"> <span class="ja">締めで終わる（最後を終止形に）</span><span class="en">End with a cadence (last bar resolves)</span></label>
-  <button id="extRnd"><span class="ja">🎲 ランダム追い足し</span><span class="en">🎲 Random extension</span></button>
-  <button id="melExtend"><span class="ja">＋ この設定で追い足す</span><span class="en">+ Extend with these settings</span></button>
-</div>
-<p class="hint ja">メロディの続きの小節を生成して末尾に足します。キー・コード進行・音域はメロディから推定し、直前の音から自然につなげます。
+<section class="win" id="winHarm">
+  <div class="win-bar"><span class="win-title"><span class="ja">伴奏付け</span><span class="en">Accompaniment</span></span></div>
+  <div class="win-body">
+    <div class="win-help">
+      <p class="hint ja">先頭トラック（最初のコメント以外のブロック）をメロディとみなし、キーとコード進行を推定してベース・アルペジオ等の伴奏を生成します。スケール・キー・テンポはメロディから推定するため設定はありません。雰囲気は伴奏の音色・パターンに使います。鍵盤録音や音声採譜のMMLにもどうぞ。</p>
+      <p class="hint en">Treats the first track (the first block that is not a comment) as the melody, estimates its key and chord progression, and generates bass, arpeggio and other accompaniment. The scale, key and tempo come from the melody, so there are no settings for them. The mood sets the accompaniment's sounds and patterns. Works on MML from the keyboard recorder or audio transcription too.</p>
+    </div>
+    <div class="controls">
+      <label><span class="ja">雰囲気</span><span class="en">Mood</span> <select id="harmMood"></select></label>
+      <label><span class="ja">リズムch</span><span class="en">Rhythm ch</span>
+        <select id="harmDrums">
+          <option value="" selected data-en="From mood">雰囲気まかせ</option>
+          <option value="hard" data-en="On (hard)">あり（強め）</option>
+          <option value="soft" data-en="On (soft)">あり（控えめ）</option>
+          <option value="off" data-en="Off">なし</option>
+        </select>
+      </label>
+      <label><span class="ja">ハーモニー</span><span class="en">Harmony</span>
+        <select id="harmHarm">
+          <option value="" selected data-en="From mood">雰囲気まかせ</option>
+          <option value="on" data-en="On">あり</option>
+          <option value="off" data-en="Off">なし</option>
+        </select>
+      </label>
+      <label><span class="ja">シード</span><span class="en">Seed</span> <input type="number" id="harmSeed" value="1" min="1" style="width:90px"></label>
+    </div>
+    <div class="controls">
+      <button id="harmRnd" class="primary"><span class="ja">🎲 ランダム伴奏付け</span><span class="en">🎲 Random accompaniment</span></button>
+      <button id="harmGo"><span class="ja">♪ この設定で伴奏付け</span><span class="en">♪ Accompany with these settings</span></button>
+    </div>
+  </div>
+</section>
+
+<section class="win" id="winExt">
+  <div class="win-bar"><span class="win-title"><span class="ja">メロディ追い足し</span><span class="en">Extend melody</span></span></div>
+  <div class="win-body">
+    <div class="win-help">
+      <p class="hint ja">メロディの続きの小節を生成して末尾に足します。キー・コード進行・音域はメロディから推定し、直前の音から自然につなげます。
 スケール指定は主音を変えずに明暗だけ変える同主調転調です（暗くしてボス感、明るくして解決など）。オクターブ上+盛り上げでクライマックス、締めで曲を閉じる、といった組み合わせができます。
 同じメロディ+同じシードなら同じ結果になり、追い足すたびに（元が長くなるので）違う小節が出ます。</p>
-<p class="hint en">Generates the next bars of the melody and adds them at the end. The key, chord progression and range are estimated from the melody, and the new bars continue naturally from the last note.
+      <p class="hint en">Generates the next bars of the melody and adds them at the end. The key, chord progression and range are estimated from the melody, and the new bars continue naturally from the last note.
 The scale setting changes to the parallel key: the tonic stays and only the brightness changes (darker for a boss feel, brighter to resolve, and so on). Combine an octave up with build-up for a climax, or end with a cadence to close the song.
 The same melody and seed give the same result, and each extension gives different bars (because the melody has grown).</p>
-</details>
+    </div>
+    <div class="controls">
+      <label><span class="ja">激しさ</span><span class="en">Intensity</span>
+        <select id="extDensity">
+          <option value="" selected data-en="From the melody">メロディから推定</option>
+          <option value="0" data-en="Gentle">おだやか</option>
+          <option value="1" data-en="Normal">ふつう</option>
+          <option value="2" data-en="Intense">はげしい</option>
+        </select>
+      </label>
+      <label><span class="ja">スケール</span><span class="en">Scale</span>
+        <select id="extScale">
+          <option value="" selected data-en="Match the melody">メロディに合わせる</option>
+          <option value="major" data-en="Brighter (major)">明るく（メジャー）</option>
+          <option value="minor" data-en="Darker (minor)">暗く（マイナー）</option>
+          <option value="dorian" data-en="Floating (dorian)">浮遊（ドリアン）</option>
+        </select>
+      </label>
+      <label><span class="ja">オクターブ</span><span class="en">Octave</span>
+        <select id="extOct">
+          <option value="0" selected data-en="Same">そのまま</option>
+          <option value="1" data-en="1 octave up">1オクターブ上</option>
+          <option value="-1" data-en="1 octave down">1オクターブ下</option>
+        </select>
+      </label>
+      <label><span class="ja">小節数</span><span class="en">Bars</span> <input type="number" id="extBars" value="1" min="1" max="8" style="width:52px"></label>
+      <label><span class="ja">シード</span><span class="en">Seed</span> <input type="number" id="extSeed" value="1" min="1" style="width:90px"></label>
+    </div>
+    <div class="controls">
+      <label><input type="checkbox" id="extBuild"> <span class="ja">盛り上げ（小節ごとに激しく）</span><span class="en">Build up (more intense each bar)</span></label>
+      <label><input type="checkbox" id="extCadence"> <span class="ja">締めで終わる（最後を終止形に）</span><span class="en">End with a cadence (last bar resolves)</span></label>
+    </div>
+    <div class="controls">
+      <button id="extRnd" class="primary"><span class="ja">🎲 ランダム追い足し</span><span class="en">🎲 Random extension</span></button>
+      <button id="melExtend"><span class="ja">＋ この設定で追い足す</span><span class="en">+ Extend with these settings</span></button>
+    </div>
+  </div>
+</section>
 
-<details class="sec" id="secDrum">
-<summary><span class="ja">リズムパッド（打ち込み式リズム入力。4トラック×16分）</span><span class="en">Rhythm pad (step input, 4 tracks × 16ths)</span></summary>
-<div class="controls">
-  <label>BPM <input type="number" id="drBpm" value="120" min="40" max="300" style="width:60px"></label>
-  <label><span class="ja">小節</span><span class="en">Bars</span>
-    <select id="drBars">
-      <option value="1">1</option>
-      <option value="2">2</option>
-      <option value="4" selected>4</option>
-    </select>
-  </label>
-  <button id="drPlay"><span class="ja">▶ パターン再生</span><span class="en">▶ Play pattern</span></button>
-  <button id="drStop"><span class="ja">■ 停止</span><span class="en">■ Stop</span></button>
-  <button id="drClear"><span class="ja">クリア</span><span class="en">Clear</span></button>
-  <span id="drStatus" style="font-size:13px; color:#88cc88"></span>
-</div>
-<div id="drPad" class="dgrid"></div>
-<div class="kb-out">
-  <textarea id="drOut" readonly rows="2" placeholder="打ち込むとここにMMLが出ます（1行=1トラック）" data-placeholder-en="The MML appears here as you enter hits (one line per track)"></textarea>
-  <button id="drCopy"><span class="ja">コピー</span><span class="en">Copy</span></button>
-  <button id="drInsert"><span class="ja">本編末尾に挿入</span><span class="en">Add to the end of the main text</span></button>
-</div>
-<p class="hint ja">セルをクリックで打点ON/OFF（ONにした瞬間に単発試聴）。キック+ハット同時のような同時打鍵はトラックを分けて入力します。
+<section class="win" id="winDrum">
+  <div class="win-bar"><span class="win-title"><span class="ja">リズムパッド</span><span class="en">Rhythm pad</span></span></div>
+  <div class="win-body">
+    <div class="win-help">
+      <p class="hint ja">打ち込み式のリズム入力です（4トラック×16分）。セルをクリックで打点ON/OFF（ONにした瞬間に単発試聴）。キック+ハット同時のような同時打鍵はトラックを分けて入力します。
 MML出力時、打点が重ならないトラック同士は1チャンネルにまとめられます（例: キックとスネアが重ならなければ1トラック）。同一ステップで重なる場合のみチャンネルが分かれます。打点のないトラックは出力されません。
 楽器はプリセットを選んでから @（波形）/ 音程（音名+オクターブ。例: c5, f#4。ノイズはバンドパス中心の微調整、noise以外はそのまま音の高さ）/ v（音量）/ q（ゲート1-8。小さくするとDecayを切り詰めて短く硬い音）/ @e（エンベロープ4値）を微調整できます。手で調整すると表示が「(手動)」になり、プリセットを選び直さない限り上書きされません。
 調整した音は「登録」で名前を付けてユーザー楽器として保存でき、プリセットの下の「ユーザー定義」から全トラックで選べます（「✕」で削除）。パターン再生は本編の再生と排他です。</p>
-<p class="hint en">Click a cell to turn a hit on or off (it plays once when you turn it on). For hits at the same moment, such as kick and hi-hat together, use separate tracks.
+      <p class="hint en">Step input for rhythm (4 tracks × 16ths). Click a cell to turn a hit on or off (it plays once when you turn it on). For hits at the same moment, such as kick and hi-hat together, use separate tracks.
 In the MML output, tracks whose hits never overlap are merged into one channel (for example, kick and snare become one track if they never coincide). Channels split only where hits fall on the same step. Tracks with no hits are left out.
 Pick a preset, then fine-tune @ (wave) / pitch (note + octave, e.g. c5, f#4; for noise it fine-tunes the band-pass center, otherwise it is the pitch itself) / v (volume) / q (gate 1-8; smaller cuts the decay for a shorter, harder sound) / @e (the 4 envelope values). Once you adjust by hand the preset shows "(manual)", and your values stay unless you pick a preset again.
 Use "Save" to name an adjusted sound and keep it as a user instrument. It appears under "User-defined" below the presets for every track ("✕" deletes it). Pattern playback and main playback do not run at the same time.</p>
-</details>
+    </div>
+    <div class="controls">
+      <label>BPM <input type="number" id="drBpm" value="120" min="40" max="300" style="width:60px"></label>
+      <label><span class="ja">小節</span><span class="en">Bars</span>
+        <select id="drBars">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="4" selected>4</option>
+        </select>
+      </label>
+      <button id="drPlay" class="primary"><span class="ja">▶ パターン再生</span><span class="en">▶ Play pattern</span></button>
+      <button id="drStop"><span class="ja">■ 停止</span><span class="en">■ Stop</span></button>
+      <button id="drClear"><span class="ja">クリア</span><span class="en">Clear</span></button>
+      <span id="drStatus" class="win-status"></span>
+    </div>
+    <div id="drPad" class="dgrid"></div>
+    <div class="kb-out">
+      <textarea id="drOut" readonly rows="2" placeholder="打ち込むとここにMMLが出ます（1行=1トラック）" data-placeholder-en="The MML appears here as you enter hits (one line per track)"></textarea>
+      <button id="drCopy"><span class="ja">コピー</span><span class="en">Copy</span></button>
+      <button id="drInsert"><span class="ja">本編末尾に挿入</span><span class="en">Add to the end of the main text</span></button>
+    </div>
+  </div>
+</section>
 
-<details class="sec" id="secKb">
-<summary><span class="ja">ミニ鍵盤（クリック / PCキー: 下段 Z S X D C… 上段 Q 2 W 3 E…）</span><span class="en">Mini keyboard (click / PC keys: lower row Z S X D C… upper row Q 2 W 3 E…)</span></summary>
-<div class="controls">
-  <label><span class="ja">音色</span><span class="en">Wave</span>
-    <select id="kbWave">
-      <option value="0">@0 sine</option>
-      <option value="1" selected>@1 square</option>
-      <option value="2">@2 triangle</option>
-      <option value="3">@3 saw</option>
-      <option value="4">@4 noise</option>
-    </select>
-  </label>
-  <label><span class="ja">音量</span><span class="en">Volume</span> <input type="range" id="kbVol" min="0" max="15" value="10" style="width:80px"></label>
-  <label>@e
-    <input type="number" id="kbA" value="3"   min="0" style="width:52px" title="attack (ms)">,
-    <input type="number" id="kbD" value="0"   min="0" style="width:52px" title="decay (ms)">,
-    <input type="number" id="kbS" value="100" min="0" max="100" style="width:52px" title="sustain (%)">,
-    <input type="number" id="kbR" value="80"  min="1" style="width:52px" title="release (ms)">
-  </label>
-  <span id="kbPrefix" class="hint"></span>
-</div>
-<p class="hint ja">エンベロープ初期値: 鍵盤 @e3,0,100,80（手弾き向けにリリース長め）／ MMLエンジン @e3,0,100,40（トラックに @e 未記載のときの値）</p>
-<p class="hint en">Default envelope: keyboard @e3,0,100,80 (longer release for playing by hand) / MML engine @e3,0,100,40 (used when a track has no @e)</p>
-<div class="controls">
-  <button id="rec"><span class="ja">● 録音開始</span><span class="en">● Record</span></button>
-  <label>BPM <input type="number" id="recBpm" value="120" min="40" max="300" style="width:60px"></label>
-  <label><span class="ja">最小音符</span><span class="en">Shortest note</span>
-    <select id="recQuant">
-      <option value="16" selected data-en="16th">16分</option>
-      <option value="8" data-en="8th">8分</option>
-    </select>
-  </label>
-  <span id="kbNow"></span>
-  <span id="recStatus"></span>
-</div>
-<div id="kb"></div>
-<div class="kb-out">
-  <input id="recOut" readonly placeholder="録音を停止するとここにMMLが出ます" data-placeholder-en="The MML appears here when you stop recording">
-  <button id="copyOut"><span class="ja">コピー</span><span class="en">Copy</span></button>
-  <button id="insertOut"><span class="ja">↑に挿入</span><span class="en">↑ Insert</span></button>
-</div>
-<p class="hint ja">単音（モノフォニック）録音です。重ねて弾いた音は前の音を切って直列化します。最初の打鍵が拍頭（時刻0）扱い。</p>
-<p class="hint en">Monophonic recording. A note played over another cuts the earlier one, so notes play one after another. The first key press counts as the downbeat (time 0).</p>
-</details>
+<section class="win" id="winKb">
+  <div class="win-bar"><span class="win-title"><span class="ja">ミニ鍵盤</span><span class="en">Mini keyboard</span></span></div>
+  <div class="win-body">
+    <div class="win-help">
+      <p class="hint ja">エンベロープ初期値: 鍵盤 @e3,0,100,80（手弾き向けにリリース長め）／ MMLエンジン @e3,0,100,40（トラックに @e 未記載のときの値）
+単音（モノフォニック）録音です。重ねて弾いた音は前の音を切って直列化します。最初の打鍵が拍頭（時刻0）扱い。</p>
+      <p class="hint en">Default envelope: keyboard @e3,0,100,80 (longer release for playing by hand) / MML engine @e3,0,100,40 (used when a track has no @e)
+Monophonic recording. A note played over another cuts the earlier one, so notes play one after another. The first key press counts as the downbeat (time 0).</p>
+    </div>
+    <div class="controls">
+      <label><span class="ja">音色</span><span class="en">Wave</span>
+        <select id="kbWave">
+          <option value="0">@0 sine</option>
+          <option value="1" selected>@1 square</option>
+          <option value="2">@2 triangle</option>
+          <option value="3">@3 saw</option>
+          <option value="4">@4 noise</option>
+        </select>
+      </label>
+      <label><span class="ja">音量</span><span class="en">Volume</span> <input type="range" id="kbVol" min="0" max="15" value="10" style="width:80px"></label>
+      <label>@e
+        <input type="number" id="kbA" value="3"   min="0" style="width:52px" title="attack (ms)">,
+        <input type="number" id="kbD" value="0"   min="0" style="width:52px" title="decay (ms)">,
+        <input type="number" id="kbS" value="100" min="0" max="100" style="width:52px" title="sustain (%)">,
+        <input type="number" id="kbR" value="80"  min="1" style="width:52px" title="release (ms)">
+      </label>
+      <span id="kbPrefix" class="hint"></span>
+    </div>
+    <div class="controls">
+      <button id="rec"><span class="ja">● 録音開始</span><span class="en">● Record</span></button>
+      <label>BPM <input type="number" id="recBpm" value="120" min="40" max="300" style="width:60px"></label>
+      <label><span class="ja">最小音符</span><span class="en">Shortest note</span>
+        <select id="recQuant">
+          <option value="16" selected data-en="16th">16分</option>
+          <option value="8" data-en="8th">8分</option>
+        </select>
+      </label>
+      <span id="kbNow"></span>
+      <span id="recStatus" class="win-status"></span>
+    </div>
+    <p class="hint ja">クリック / PCキー: 下段 Z S X D C… 上段 Q 2 W 3 E…（このウインドウが開いているときだけ）</p>
+    <p class="hint en">Click / PC keys: lower row Z S X D C… upper row Q 2 W 3 E… (only while this window is open)</p>
+    <div id="kb"></div>
+    <div class="kb-out">
+      <input id="recOut" readonly placeholder="録音を停止するとここにMMLが出ます" data-placeholder-en="The MML appears here when you stop recording">
+      <button id="copyOut"><span class="ja">コピー</span><span class="en">Copy</span></button>
+      <button id="insertOut"><span class="ja">↑に挿入</span><span class="en">↑ Insert</span></button>
+    </div>
+  </div>
+</section>
 
-<details class="sec" id="secAudio">
-<summary><span class="ja">音声→MML（鼻歌・口笛・単音楽器を採譜。マイク / 音声ファイル）</span><span class="en">Audio → MML (transcribe humming, whistling or a single-note instrument; mic / audio file)</span></summary>
-<div class="controls">
-  <button id="micRec"><span class="ja">● マイク録音</span><span class="en">● Mic record</span></button>
-  <label>BPM <input type="number" id="audBpm" value="120" min="40" max="300" style="width:60px"></label>
-  <label><span class="ja">最小音符</span><span class="en">Shortest note</span>
-    <select id="audQuant">
-      <option value="16" selected data-en="16th">16分</option>
-      <option value="8" data-en="8th">8分</option>
-    </select>
-  </label>
-  <label><span class="ja">感度</span><span class="en">Sensitivity</span>
-    <select id="audSens">
-      <option value="high" data-en="High (quiet voice, farther away)">高（小声・遠め）</option>
-      <option value="mid" selected data-en="Medium">中</option>
-      <option value="low" data-en="Low (noisy place)">低（騒がしい場所）</option>
-    </select>
-  </label>
-  <span id="micNote" style="color:#88cc88; min-width:5em"></span>
-</div>
-<div class="controls">
-  <label><span class="ja">音声ファイル</span><span class="en">Audio file</span> <input type="file" id="audFile" accept="audio/*"></label>
-  <span id="audStatus" style="font-size:13px; color:#ffaa88"></span>
-</div>
-<div class="kb-out">
-  <input id="audOut" readonly placeholder="録音停止またはファイル選択で解析し、ここにMMLが出ます" data-placeholder-en="Stop recording or choose a file; it is analyzed and the MML appears here">
-  <button id="audCopy"><span class="ja">コピー</span><span class="en">Copy</span></button>
-  <button id="audInsert"><span class="ja">↑に挿入</span><span class="en">↑ Insert</span></button>
-</div>
-<p class="hint ja">単音（モノフォニック）専用です。和音や伴奏入りの曲からは採譜できません。
+<section class="win" id="winAudio">
+  <div class="win-bar"><span class="win-title"><span class="ja">音声→MML</span><span class="en">Audio → MML</span></span></div>
+  <div class="win-body">
+    <div class="win-help">
+      <p class="hint ja">鼻歌・口笛・単音楽器を採譜します（マイク / 音声ファイル）。単音（モノフォニック）専用で、和音や伴奏入りの曲からは採譜できません。
 同じ高さの音を続けるときは「たたた」「らんらん」のように子音を挟むと切れ目を検出しやすくなります。
-最初の検出音が拍頭（時刻0）扱いなので、BPMは歌ったテンポ感に合わせてください。変換後はテキストエリアで手直しし、「♪ 伴奏を付ける」につなげるのがおすすめです。</p>
-<p class="hint en">Monophonic only. It cannot transcribe chords or songs with accompaniment.
+最初の検出音が拍頭（時刻0）扱いなので、BPMは歌ったテンポ感に合わせてください。変換後はテキストエリアで手直しし、「伴奏付け」につなげるのがおすすめです。</p>
+      <p class="hint en">Transcribes humming, whistling or a single-note instrument (mic / audio file). Monophonic only: it cannot transcribe chords or songs with accompaniment.
 When you repeat the same pitch, putting a consonant between notes ("ta-ta-ta", "la-la-la") makes the breaks easier to detect.
-The first detected note counts as the downbeat (time 0), so set the BPM to the tempo you sang at. After converting, touch it up in the text area, then try "Add accompaniment".</p>
-</details>
+The first detected note counts as the downbeat (time 0), so set the BPM to the tempo you sang at. After converting, touch it up in the text area, then try "Accompaniment".</p>
+    </div>
+    <div class="controls">
+      <button id="micRec"><span class="ja">● マイク録音</span><span class="en">● Mic record</span></button>
+      <label>BPM <input type="number" id="audBpm" value="120" min="40" max="300" style="width:60px"></label>
+      <label><span class="ja">最小音符</span><span class="en">Shortest note</span>
+        <select id="audQuant">
+          <option value="16" selected data-en="16th">16分</option>
+          <option value="8" data-en="8th">8分</option>
+        </select>
+      </label>
+      <label><span class="ja">感度</span><span class="en">Sensitivity</span>
+        <select id="audSens">
+          <option value="high" data-en="High (quiet voice, farther away)">高（小声・遠め）</option>
+          <option value="mid" selected data-en="Medium">中</option>
+          <option value="low" data-en="Low (noisy place)">低（騒がしい場所）</option>
+        </select>
+      </label>
+      <span id="micNote"></span>
+    </div>
+    <div class="controls">
+      <label><span class="ja">音声ファイル</span><span class="en">Audio file</span> <input type="file" id="audFile" accept="audio/*"></label>
+      <span id="audStatus" class="win-status"></span>
+    </div>
+    <div class="kb-out">
+      <input id="audOut" readonly placeholder="録音停止またはファイル選択で解析し、ここにMMLが出ます" data-placeholder-en="Stop recording or choose a file; it is analyzed and the MML appears here">
+      <button id="audCopy"><span class="ja">コピー</span><span class="en">Copy</span></button>
+      <button id="audInsert"><span class="ja">↑に挿入</span><span class="en">↑ Insert</span></button>
+    </div>
+  </div>
+</section>
 
-<details>
-  <summary><span class="ja">MML記法リファレンス</span><span class="en">MML reference</span></summary>
-  <table>
-    <tr><td>c d e f g a b</td><td><span class="ja">音符。直後に # / + でシャープ、- でフラット（例: c# b-）</span><span class="en">Notes. Add # / + for sharp or - for flat right after (e.g. c# b-)</span></td></tr>
-    <tr><td><span class="ja">数字・付点</span><span class="en">Number, dot</span></td><td><span class="ja">音長。c4=四分 c8=八分 c12=三連 c4.=付点四分（省略時は l の値）</span><span class="en">Length. c4 = quarter, c8 = eighth, c12 = triplet, c4. = dotted quarter (the l value when omitted)</span></td></tr>
-    <tr><td>r</td><td><span class="ja">休符（音長指定は音符と同じ）</span><span class="en">Rest (lengths work as for notes)</span></td></tr>
-    <tr><td>o4 / &gt; / &lt;</td><td><span class="ja">オクターブ指定 / +1 / -1（o4 の a = 440Hz）</span><span class="en">Set octave / up 1 / down 1 (a in o4 = 440 Hz)</span></td></tr>
-    <tr><td>l8</td><td><span class="ja">デフォルト音長（初期値4）</span><span class="en">Default length (default 4)</span></td></tr>
-    <tr><td>t140</td><td><span class="ja">テンポBPM（初期値120。全トラックに書くこと）</span><span class="en">Tempo in BPM (default 120; write it in every track)</span></td></tr>
-    <tr><td><span class="ja">v0〜v15</span><span class="en">v0-v15</span></td><td><span class="ja">音量（初期値10）</span><span class="en">Volume (default 10)</span></td></tr>
-    <tr><td><span class="ja">q1〜q8</span><span class="en">q1-q8</span></td><td><span class="ja">ゲートタイム。8=音長いっぱい、小さいほどスタッカート（初期値8）</span><span class="en">Gate time. 8 = full length, smaller = more staccato (default 8)</span></td></tr>
-    <tr><td><span class="ja">@0〜@4</span><span class="en">@0-@4</span></td><td><span class="ja">音色: 0=sine 1=square 2=triangle 3=saw 4=noise（初期値1）</span><span class="en">Wave: 0=sine 1=square 2=triangle 3=saw 4=noise (default 1)</span></td></tr>
-    <tr><td>@e3,0,100,40</td><td><span class="ja">エンベロープ: attack(ms), decay(ms), sustain(%), release(ms)。<b>初期値 @e3,0,100,40</b>（初期値に戻すにはこの値を書く）</span><span class="en">Envelope: attack (ms), decay (ms), sustain (%), release (ms). <b>Default @e3,0,100,40</b> (write this to go back to the default)</span></td></tr>
-    <tr><td>&amp;</td><td><span class="ja">タイ/スラー。前の音符と繋いでアタックを鳴らし直さない。c4&amp;c8=タイ（長くする） c4&amp;e4=スラー（音程だけ差し替え）</span><span class="en">Tie / slur. Joins to the previous note without a new attack. c4&amp;c8 = tie (longer), c4&amp;e4 = slur (only the pitch changes)</span></td></tr>
-    <tr><td>m120,5,30</td><td><span class="ja">LFO（ビブラート）: 遅れ(ms), 速さ(Hz), 深さ(セント。中心から±)。遅れは音符ごとに数え直す。<b>初期値 m0,0,0</b>＝無効</span><span class="en">LFO (vibrato): delay (ms), rate (Hz), depth (cents, ± around the center). The delay restarts on each note. <b>Default m0,0,0</b> = off</span></td></tr>
-    <tr><td>p60</td><td><span class="ja">ポルタメント。&amp; の繋ぎ目を60msかけて滑らせる（&amp; が無い並びには効かない）。<b>初期値 p0</b>＝瞬時に切り替え</span><span class="en">Portamento. Glides over 60 ms at each &amp; joint (no effect without &amp;). <b>Default p0</b> = instant</span></td></tr>
-    <tr><td>@b-200,60</td><td><span class="ja">ベンド。出だしを200セント下（負で下・正で上。@b+200,60 とも書ける）から60msで正規の音程へ。<b>次の音符1つにだけ効く</b>ので解除は不要（休符は消費しない）</span><span class="en">Bend. Starts 200 cents below (negative = below, positive = above; @b+200,60 also works) and reaches the pitch in 60 ms. <b>Applies to the next note only</b>, so there is nothing to reset (rests do not use it up)</span></td></tr>
-    <tr><td>[ ... ]3</td><td><span class="ja">リピート3回（ネスト可）。1トラックの音符+休符が100万を超えるとエラー</span><span class="en">Repeat 3 times (can nest). An error if one track expands to more than 1,000,000 notes and rests</span></td></tr>
-    <tr><td>[ ... ]0</td><td><span class="ja">数字なし・0 は無限ループ: 2周目以降ここから繰り返す（イントロ付きループ用。トラック末尾にのみ書ける。複数トラックでは最も遅い開始点を採用）</span><span class="en">No number or 0 = infinite loop: from the second time on, playback repeats from here (for loops with an intro; only at the end of a track; with several tracks the latest start point is used)</span></td></tr>
-    <tr><td>|</td><td><span class="ja">小節区切り（再生には影響しない。見た目整理用）</span><span class="en">Bar line (no effect on playback; for readability)</span></td></tr>
-  </table>
-  <p class="hint ja">&amp; で繋いだ音は<b>1回しか発音しません</b>（音色・音量・エンベロープは繋いだ先頭の音のものを全体に使います）。m の遅れも繋いだ全体の頭から数えるので、長く伸ばすほどビブラートが育ちます。
-  m と @b はどちらもセント単位で同じ detune の上で加算されるため、@b-100,60 m120,5,30 なら「しゃくり上げてから揺れ始める」になります。
-  半音・全音のように音名で書ける上下（ハーモニカのベンドから戻る奏法など）は p と &amp; で書けます: <code>p40 o4 e16&amp;d16&amp;e2.</code> — アタックは1回だけで E→D→E とひと息で動きます。</p>
-  <p class="hint en">Notes joined with &amp; <b>sound only once</b> (the wave, volume and envelope of the first note apply to the whole). The m delay also counts from the start of the whole joined note, so the longer it is held, the more the vibrato grows.
-  m and @b are both in cents and add up on the same detune, so @b-100,60 m120,5,30 scoops up into the note and then starts to wobble.
-  Moves you can write as note names (a half or whole step, such as bending a harmonica note and releasing it) can be written with p and &amp;: <code>p40 o4 e16&amp;d16&amp;e2.</code> — one attack, moving E→D→E in one breath.</p>
-  <p class="hint ja">上の表はエンジン（mml.js）自体の記法です。mml.js が読み飛ばすのは<b>空白・タブ・改行・|</b> の4つだけで、それ以外の未知の文字はエラーになります。
-  コメント（; と /* ～ */）と「行頭=新トラック / 行頭空白=継続行」は<b>このエディタ側の機能</b>で、mml.js 単体にはありません（mml.js へは1トラック=1文字列の配列で渡します）。
-  他プロジェクトの mml.js で鳴らしたいときは「mml.js用にコピー」ボタンを使うと、コメントを除去し継続行を連結した1行=1トラックの形でコピーできます。</p>
-  <p class="hint en">The table above is the notation of the engine (mml.js) itself. mml.js skips only <b>spaces, tabs, line breaks and |</b>; any other unknown character is an error.
-  Comments (; and /* ... */) and "left edge = new track / leading space = continuation" are <b>features of this editor</b>, not of mml.js (mml.js takes an array with one string per track).
-  To play your song with mml.js in another project, use the "Copy for mml.js" button: it removes comments and joins continuation lines into one line per track.</p>
-</details>
+<section class="win" id="winRef">
+  <div class="win-bar"><span class="win-title"><span class="ja">記法リファレンス</span><span class="en">MML reference</span></span></div>
+  <div class="win-body">
+    <table>
+      <tr><td>c d e f g a b</td><td><span class="ja">音符。直後に # / + でシャープ、- でフラット（例: c# b-）</span><span class="en">Notes. Add # / + for sharp or - for flat right after (e.g. c# b-)</span></td></tr>
+      <tr><td><span class="ja">数字・付点</span><span class="en">Number, dot</span></td><td><span class="ja">音長。c4=四分 c8=八分 c12=三連 c4.=付点四分（省略時は l の値）</span><span class="en">Length. c4 = quarter, c8 = eighth, c12 = triplet, c4. = dotted quarter (the l value when omitted)</span></td></tr>
+      <tr><td>r</td><td><span class="ja">休符（音長指定は音符と同じ）</span><span class="en">Rest (lengths work as for notes)</span></td></tr>
+      <tr><td>o4 / &gt; / &lt;</td><td><span class="ja">オクターブ指定 / +1 / -1（o4 の a = 440Hz）</span><span class="en">Set octave / up 1 / down 1 (a in o4 = 440 Hz)</span></td></tr>
+      <tr><td>l8</td><td><span class="ja">デフォルト音長（初期値4）</span><span class="en">Default length (default 4)</span></td></tr>
+      <tr><td>t140</td><td><span class="ja">テンポBPM（初期値120。全トラックに書くこと）</span><span class="en">Tempo in BPM (default 120; write it in every track)</span></td></tr>
+      <tr><td><span class="ja">v0〜v15</span><span class="en">v0-v15</span></td><td><span class="ja">音量（初期値10）</span><span class="en">Volume (default 10)</span></td></tr>
+      <tr><td><span class="ja">q1〜q8</span><span class="en">q1-q8</span></td><td><span class="ja">ゲートタイム。8=音長いっぱい、小さいほどスタッカート（初期値8）</span><span class="en">Gate time. 8 = full length, smaller = more staccato (default 8)</span></td></tr>
+      <tr><td><span class="ja">@0〜@4</span><span class="en">@0-@4</span></td><td><span class="ja">音色: 0=sine 1=square 2=triangle 3=saw 4=noise（初期値1）</span><span class="en">Wave: 0=sine 1=square 2=triangle 3=saw 4=noise (default 1)</span></td></tr>
+      <tr><td>@e3,0,100,40</td><td><span class="ja">エンベロープ: attack(ms), decay(ms), sustain(%), release(ms)。<b>初期値 @e3,0,100,40</b>（初期値に戻すにはこの値を書く）</span><span class="en">Envelope: attack (ms), decay (ms), sustain (%), release (ms). <b>Default @e3,0,100,40</b> (write this to go back to the default)</span></td></tr>
+      <tr><td>&amp;</td><td><span class="ja">タイ/スラー。前の音符と繋いでアタックを鳴らし直さない。c4&amp;c8=タイ（長くする） c4&amp;e4=スラー（音程だけ差し替え）</span><span class="en">Tie / slur. Joins to the previous note without a new attack. c4&amp;c8 = tie (longer), c4&amp;e4 = slur (only the pitch changes)</span></td></tr>
+      <tr><td>m120,5,30</td><td><span class="ja">LFO（ビブラート）: 遅れ(ms), 速さ(Hz), 深さ(セント。中心から±)。遅れは音符ごとに数え直す。<b>初期値 m0,0,0</b>＝無効</span><span class="en">LFO (vibrato): delay (ms), rate (Hz), depth (cents, ± around the center). The delay restarts on each note. <b>Default m0,0,0</b> = off</span></td></tr>
+      <tr><td>p60</td><td><span class="ja">ポルタメント。&amp; の繋ぎ目を60msかけて滑らせる（&amp; が無い並びには効かない）。<b>初期値 p0</b>＝瞬時に切り替え</span><span class="en">Portamento. Glides over 60 ms at each &amp; joint (no effect without &amp;). <b>Default p0</b> = instant</span></td></tr>
+      <tr><td>@b-200,60</td><td><span class="ja">ベンド。出だしを200セント下（負で下・正で上。@b+200,60 とも書ける）から60msで正規の音程へ。<b>次の音符1つにだけ効く</b>ので解除は不要（休符は消費しない）</span><span class="en">Bend. Starts 200 cents below (negative = below, positive = above; @b+200,60 also works) and reaches the pitch in 60 ms. <b>Applies to the next note only</b>, so there is nothing to reset (rests do not use it up)</span></td></tr>
+      <tr><td>[ ... ]3</td><td><span class="ja">リピート3回（ネスト可）。1トラックの音符+休符が100万を超えるとエラー</span><span class="en">Repeat 3 times (can nest). An error if one track expands to more than 1,000,000 notes and rests</span></td></tr>
+      <tr><td>[ ... ]0</td><td><span class="ja">数字なし・0 は無限ループ: 2周目以降ここから繰り返す（イントロ付きループ用。トラック末尾にのみ書ける。複数トラックでは最も遅い開始点を採用）</span><span class="en">No number or 0 = infinite loop: from the second time on, playback repeats from here (for loops with an intro; only at the end of a track; with several tracks the latest start point is used)</span></td></tr>
+      <tr><td>|</td><td><span class="ja">小節区切り（再生には影響しない。見た目整理用）</span><span class="en">Bar line (no effect on playback; for readability)</span></td></tr>
+    </table>
+    <p class="hint ja">&amp; で繋いだ音は<b>1回しか発音しません</b>（音色・音量・エンベロープは繋いだ先頭の音のものを全体に使います）。m の遅れも繋いだ全体の頭から数えるので、長く伸ばすほどビブラートが育ちます。
+    m と @b はどちらもセント単位で同じ detune の上で加算されるため、@b-100,60 m120,5,30 なら「しゃくり上げてから揺れ始める」になります。
+    半音・全音のように音名で書ける上下（ハーモニカのベンドから戻る奏法など）は p と &amp; で書けます: <code>p40 o4 e16&amp;d16&amp;e2.</code> — アタックは1回だけで E→D→E とひと息で動きます。</p>
+    <p class="hint en">Notes joined with &amp; <b>sound only once</b> (the wave, volume and envelope of the first note apply to the whole). The m delay also counts from the start of the whole joined note, so the longer it is held, the more the vibrato grows.
+    m and @b are both in cents and add up on the same detune, so @b-100,60 m120,5,30 scoops up into the note and then starts to wobble.
+    Moves you can write as note names (a half or whole step, such as bending a harmonica note and releasing it) can be written with p and &amp;: <code>p40 o4 e16&amp;d16&amp;e2.</code> — one attack, moving E→D→E in one breath.</p>
+    <p class="hint ja">上の表はエンジン（mml.js）自体の記法です。mml.js が読み飛ばすのは<b>空白・タブ・改行・|</b> の4つだけで、それ以外の未知の文字はエラーになります。
+    コメント（; と /* ～ */）と「行頭=新トラック / 行頭空白=継続行」は<b>このエディタ側の機能</b>で、mml.js 単体にはありません（mml.js へは1トラック=1文字列の配列で渡します）。
+    他プロジェクトの mml.js で鳴らしたいときは「mml.js用にコピー」ボタンを使うと、コメントを除去し継続行を連結した1行=1トラックの形でコピーできます。</p>
+    <p class="hint en">The table above is the notation of the engine (mml.js) itself. mml.js skips only <b>spaces, tabs, line breaks and |</b>; any other unknown character is an error.
+    Comments (; and /* ... */) and "left edge = new track / leading space = continuation" are <b>features of this editor</b>, not of mml.js (mml.js takes an array with one string per track).
+    To play your song with mml.js in another project, use the "Copy for mml.js" button: it removes comments and joins continuation lines into one line per track.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="hintbar">
+  <span id="hint" class="hint-text"></span>
+  <span id="error"></span>
+</footer>
 
 <script src="mml.js"></script>
 <script src="js/mml-composer.js"></script>
@@ -327,6 +403,6 @@ The first detected note counts as the downbeat (time 0), so set the BPM to the t
 <script src="js/record.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/drum.js"></script>
-<script src="js/sections.js"></script>
+<script src="js/desk.js"></script>
 </body>
 </html>
