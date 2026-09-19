@@ -77,7 +77,7 @@ function loadI18n({ language, saved, storageBroken } = {}) {
   const localStorage = storageBroken
     ? { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } }
     : dom.localStorage;
-  const api = eval(read('js/i18n.js') + ';({ LANG, T, TEXT, setLang })');   // eslint-disable-line no-eval
+  const api = eval(read('js/i18n.js') + ';({ LANG, T, TEXT, setLang, applyLangAttrs })');   // eslint-disable-line no-eval
   return {
     ...api,
     saved: () => dom.localStorage.getItem('mmlforge8-lang'),

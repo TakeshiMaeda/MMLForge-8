@@ -26,6 +26,17 @@ const LANG = (() => {
 })();
 document.documentElement.lang = LANG;
 
+// title / placeholder と、プルダウンの選択肢（<option>）の中身は span で出し分けられない。
+// そこで HTML には日本語を書き、英語を data-title-en / data-placeholder-en / data-en に並べておき、
+// 英語のときだけ差し替える。本文を読み終えてから（DOMContentLoaded）行う
+function applyLangAttrs(root) {
+  if (LANG === 'ja') return;
+  root.querySelectorAll('[data-title-en]').forEach(el => { el.title = el.dataset.titleEn; });
+  root.querySelectorAll('[data-placeholder-en]').forEach(el => { el.placeholder = el.dataset.placeholderEn; });
+  root.querySelectorAll('option[data-en]').forEach(el => { el.textContent = el.dataset.en; });
+}
+document.addEventListener('DOMContentLoaded', () => applyLangAttrs(document));
+
 // 言語を切り替える。保存して読み直す（テキストエリアの内容は自動保存済みなので消えない）
 function setLang(l) {
   if (!LANGS.includes(l)) return;

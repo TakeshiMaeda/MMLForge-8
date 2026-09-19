@@ -69,6 +69,22 @@ module.exports = {
     ok(!r.reloaded(), '読み直さない');
   },
 
+  // ── 属性と選択肢の差し替え（span で出し分けられないもの） ──
+  '英語のとき、title / placeholder / 選択肢を data-*-en の英語に差し替える'() {
+    const r = loadI18n({ language: 'en-US' });
+    const el = (dataset) => ({ dataset, title: '日本語', placeholder: '日本語', textContent: '日本語' });
+    const a = el({ titleEn: 'Help' }), b = el({ placeholderEn: 'Auto' }), c = el({ en: 'From mood' });
+    const root = { querySelectorAll: (sel) => ({ '[data-title-en]': [a], '[data-placeholder-en]': [b], 'option[data-en]': [c] }[sel] || []) };
+    r.applyLangAttrs(root);
+    eq([a.title, b.placeholder, c.textContent], ['Help', 'Auto', 'From mood']);
+  },
+  '日本語のときは差し替えない（HTML に書いた日本語のまま）'() {
+    const r = loadI18n({ language: 'ja-JP' });
+    let touched = false;
+    r.applyLangAttrs({ querySelectorAll: () => { touched = true; return []; } });
+    ok(!touched);
+  },
+
   // ── 文言 ──
   'T は今の言語の文言を返し、params を埋める'() {
     const p = { track: 2, line: 3, col: 5, body: 'X' };
