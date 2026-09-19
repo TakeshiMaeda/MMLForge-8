@@ -21,6 +21,10 @@
   td { border: 1px solid #334455; padding: 3px 10px; }
   td:first-child { color: #ffdd88; white-space: nowrap; }
   .hint { color: #667; font-size: 12px; }
+  /* ── 表示言語の出し分け（<html lang> は js/i18n.js が <head> で決める） ── */
+  html[lang="ja"] .en, html[lang="en"] .ja { display: none !important; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .lang-toggle { padding: 4px 12px; font-size: 13px; }
   .subbox { border: 1px dashed #334455; border-radius: 6px; padding: 2px 10px 6px; margin: 10px 0; }
   /* ── リズムパッド ── */
   .dgrid { overflow-x: auto; padding: 4px 0; }

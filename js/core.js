@@ -148,7 +148,7 @@ function trackPos(block, pos) {
 }
 
 // mml.js のエラー（MMLError。文言を持たず code と位置だけ）を、エディタ上の行と文字位置つきの
-// 日本語にする。文言は js/mml-messages.js が持つ。
+// 表示言語の文にする。文言は js/mml-messages.js、位置の書式は js/i18n.js が持つ。
 //   トラック2 3行目 5文字目: 解釈できない文字です: "%"
 // mml.js 以外のエラー（作曲エンジン等、最初から日本語の message を持つもの）はそのまま返す
 function locateError(e, blocks) {
@@ -156,9 +156,9 @@ function locateError(e, blocks) {
   const body = mmlMessage(e);
   const b = (e.track === null || e.track === undefined) ? null : blocks[e.track];
   if (!b) return body;                                   // 曲全体のエラー（NO_NOTES）
-  if (!(e.pos > 0)) return `トラック${e.track + 1}: ${body}`;
+  if (!(e.pos > 0)) return T('err.track', { track: e.track + 1, body });
   const { line, col } = trackPos(b, e.pos);
-  return `トラック${e.track + 1} ${line}行目 ${col}文字目: ${body}`;
+  return T('err.at', { track: e.track + 1, line, col, body });
 }
 
 // エラー欄に出す。MMLの記法エラーなら原文の行と文字位置に直す
@@ -549,4 +549,7 @@ document.getElementById('stop').addEventListener('click', () => {
   status.textContent = '停止';
 });
 vol.addEventListener('input', () => MMLPlayer.setVolume(vol.value / 100));
+
+// 表示言語の切り替え（今と逆の言語へ。保存して読み直す）
+document.getElementById('langToggle').addEventListener('click', () => setLang(LANG === 'ja' ? 'en' : 'ja'));
 

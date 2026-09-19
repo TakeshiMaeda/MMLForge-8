@@ -70,6 +70,16 @@ module.exports = {
   '知らない言語を指定されたら日本語で出す'() {
     eq(mmlMessage({ code: 'NO_NOTES' }, 'xx'), '演奏する音符がありません');
   },
+  '英語の文言も作れる'() {
+    eq(mmlMessage({ code: 'BAD_CHAR', params: { char: '%' } }, 'en'), 'Unexpected character: "%"');
+    eq(mmlMessage({ code: 'WAVE_RANGE', params: { max: 4 } }, 'en'), '@ needs a wave number (0-4)');
+    eq(mmlMessage({ code: 'NOPE' }, 'en'), 'Unknown error (NOPE)');
+  },
+  '言語を省略したら今の表示言語で出す'() {
+    const en = loadCore(P, { language: 'en-US' });
+    eq(en.LANG, 'en');
+    eq(en.mmlMessage({ code: 'NO_NOTES' }), 'Nothing to play');
+  },
 
   // ── 実際に mml.js が投げたものを文言にできる ──
   'mml.js が投げる全コードを実際に文言化できる'() {
@@ -82,8 +92,11 @@ module.exports = {
       let e = null;
       try { P.parse(src); } catch (err) { e = err; }
       ok(e && e.code, `${src} はエラーになるはず`);
-      const text = mmlMessage(e);
-      ok(text && !text.startsWith('不明なエラー'), `${src} → ${e.code} の文言がありません（${text}）`);
+      Object.keys(MML_MSG).forEach(lang => {
+        const text = mmlMessage(e, lang);
+        const unknown = MML_MSG[lang].UNKNOWN({ code: e.code });
+        ok(text && text !== unknown, `${lang}: ${src} → ${e.code} の文言がありません（${text}）`);
+      });
     });
   },
 };

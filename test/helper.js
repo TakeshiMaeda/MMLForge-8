@@ -16,8 +16,9 @@ function loadPlayer() {
   return eval(read('mml.js') + ';MMLPlayer');   // eslint-disable-line no-eval
 }
 
-// core.js を動かすための最小DOM。属性は読み書きできればよく、描画はしない
-function makeDom() {
+// core.js を動かすための最小DOM。属性は読み書きできればよく、描画はしない。
+// language はブラウザの言語（navigator.language）。undefined を渡せば「取れない」環境になる
+function makeDom(language) {
   const els = {};
   const el = () => ({
     value: '', textContent: '', innerHTML: '', checked: false, title: '', type: '',
@@ -31,6 +32,7 @@ function makeDom() {
       createElement: () => el(),
       createTextNode: () => ({}),
       addEventListener() {},
+      documentElement: { lang: '' },   // js/i18n.js が <html lang> を決める
     },
     localStorage: {
       _d: {},
@@ -38,19 +40,41 @@ function makeDom() {
       setItem(k, v) { this._d[k] = String(v); },
       removeItem(k) { delete this._d[k]; },
     },
-    navigator: { clipboard: { writeText: async () => {} } },
+    navigator: { language, clipboard: { writeText: async () => {} } },
+    location: { reloaded: false, reload() { this.reloaded = true; } },
   };
 }
 
 // core.js を評価して、DOMに依存しない関数と textarea 要素を取り出す。
-// mml-messages.js（エラーコード→文言の表）は core.js より先に読む＝index.html と同じ順序
-function loadCore(MMLPlayer) {
-  const dom = makeDom();
-  const { document, localStorage, navigator } = dom;   // 直下の eval から見える必要がある
-  void navigator;
-  const api = eval(read('js/mml-messages.js') + '\n' + read('js/core.js')   // eslint-disable-line no-eval
-    + ';({ stripComments, parseTrackBlocks, trackPos, locateError, mmlMessage, MML_MSG, barCheck, optimizeMML, ta })');
+// 読む順は index.html と同じ: i18n.js（表示言語）→ mml-messages.js（エラー文言）→ core.js。
+// opts.language でブラウザの言語を差し替えられる（既定は日本語＝既存のテストは日本語の文言で見る）
+function loadCore(MMLPlayer, opts = {}) {
+  const dom = makeDom(opts.language ?? 'ja-JP');
+  const { document, localStorage, navigator, location } = dom;   // 直下の eval から見える必要がある
+  void navigator; void location;
+  const src = [read('js/i18n.js'), read('js/mml-messages.js'), read('js/core.js')].join(';' + String.fromCharCode(10));
+  const api = eval(src   // eslint-disable-line no-eval
+    + ';({ LANG, T, TEXT, stripComments, parseTrackBlocks, trackPos, locateError, mmlMessage, MML_MSG, barCheck, optimizeMML, ta })');
   return { ...api, localStorage, document };
+}
+
+// i18n.js だけを評価する（言語の決め方と切り替えのテスト用）。
+//   language … ブラウザの言語。saved … 保存済みの言語。storageBroken … localStorage が例外を投げる環境
+function loadI18n({ language, saved, storageBroken } = {}) {
+  const dom = makeDom(language);
+  const { document, navigator, location } = dom;
+  void navigator;
+  if (saved !== undefined) dom.localStorage.setItem('mmlforge8-lang', saved);
+  const localStorage = storageBroken
+    ? { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } }
+    : dom.localStorage;
+  const api = eval(read('js/i18n.js') + ';({ LANG, T, TEXT, setLang })');   // eslint-disable-line no-eval
+  return {
+    ...api,
+    saved: () => dom.localStorage.getItem('mmlforge8-lang'),
+    reloaded: () => location.reloaded,
+    htmlLang: () => document.documentElement.lang,
+  };
 }
 
 // ── 検証 ──────────────────────────────────
@@ -87,4 +111,4 @@ const throwsWith = (fn, want, msg) => {
   if (!e.message.includes(want)) fail(`${msg || ''}: 文言が違います\n      期待に含む: ${want}\n      実際      : ${e.message}`);
 };
 
-module.exports = { ROOT, read, loadPlayer, loadCore, ok, eq, near, throwsCode, throwsWith, Failed };
+module.exports = { ROOT, read, loadPlayer, loadCore, loadI18n, ok, eq, near, throwsCode, throwsWith, Failed };

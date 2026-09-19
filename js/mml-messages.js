@@ -7,6 +7,7 @@
 //
 //  UNKNOWN は表に無いコードが来たときの受け皿（古いエディタに新しい mml.js を
 //  組み合わせた場合など）。文言が無くても、位置は core.js の locateError が付ける。
+//  言語は js/i18n.js の LANG に従う。ja と en は同じキーを持つこと（test/messages.test.js が見張る）
 // ─────────────────────────────────────────
 const MML_MSG = {
   ja: {
@@ -43,10 +44,46 @@ const MML_MSG = {
 
     NO_NOTES:   () => '演奏する音符がありません',
   },
+
+  en: {
+    UNKNOWN:        p => `Unknown error (${p.code})`,
+
+    BAD_CHAR:       p => `Unexpected character: "${p.char}"`,
+    LEN_MIN:        () => 'Note length must be 1 or more',
+    COMMA_REQUIRED: p => `${p.label} values must be separated by commas`,
+    TOO_MANY_STEPS: p => `Repeats expand too far (more than ${p.max} notes and rests)`,
+
+    TIE_NO_PREV:    () => '& needs a note before it',
+    TIE_NO_NEXT:    () => '& needs a note after it',
+    TIE_REST:       () => '& needs a note after it (rests cannot be tied)',
+
+    UNMATCHED_OPEN:  () => '[ has no matching ]',
+    UNMATCHED_CLOSE: () => '] has no matching [',
+    LOOP_NOT_LAST:   () => 'An infinite loop ([ ] with no count or 0) can only be at the end of a track (not inside a repeat)',
+    LOOP_EMPTY:      () => 'An infinite loop needs at least one note or rest',
+
+    O_RANGE:    () => 'o needs an octave number (0-8)',
+    OCT_OVER:   () => '> would take the octave above 8',
+    OCT_UNDER:  () => '< would take the octave below 0',
+    L_ARG:      () => 'l needs a note length',
+    T_ARG:      () => 't needs a tempo',
+    V_RANGE:    () => 'v needs a volume (0-15)',
+    Q_RANGE:    () => 'q needs a gate time (1-8)',
+    P_ARG:      () => 'p needs a portamento time (ms)',
+
+    M_ARGS:     () => 'm needs 3 values: delay,rate,depth',
+    E_ARGS:     () => '@e needs 4 values: attack,decay,sustain,release',
+    E_SUSTAIN:  () => '@e sustain must be 0-100',
+    B_ARGS:     () => '@b needs 2 values: offset (cents),time (ms)',
+    WAVE_RANGE: p => `@ needs a wave number (0-${p.max})`,
+
+    NO_NOTES:   () => 'Nothing to play',
+  },
 };
 
-// MMLError を文言にする（位置は付けない。位置つきの整形は core.js の locateError）
-function mmlMessage(e, lang = 'ja') {
+// MMLError を文言にする（位置は付けない。位置つきの整形は core.js の locateError）。
+// lang を省略したら表示言語（js/i18n.js の LANG）。i18n.js 無しで使われたら日本語
+function mmlMessage(e, lang = (typeof LANG === 'string' ? LANG : 'ja')) {
   const table = MML_MSG[lang] || MML_MSG.ja;
   const f = table[e.code];
   return f ? f(e.params || {}) : table.UNKNOWN({ code: e.code });

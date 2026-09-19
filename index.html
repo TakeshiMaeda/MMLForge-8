@@ -4,9 +4,13 @@
 <meta charset="UTF-8">
 <title>MMLForge-8</title>
 <link rel="stylesheet" href="css/style.css">
+<script src="js/i18n.js"></script>
 </head>
 <body>
-<h1>MMLForge-8 <span class="hint">— MML chiptune workbench</span></h1>
+<header class="top">
+  <h1>MMLForge-8 <span class="hint">— MML chiptune workbench</span></h1>
+  <button id="langToggle" class="lang-toggle" title="Language / 言語"><span class="ja">English</span><span class="en">日本語</span></button>
+</header>
 <p class="hint">行頭から始まる行 = 新トラック（複数トラックは同時再生で和音・伴奏）。行頭に空白を入れた行は前のトラックの続き（トラック内で自由に改行できます）。コメントは「;」（そこから行末まで。行の途中でも可）と /* ～ */（複数行またぎも可）の2種類で、空行とともに無視されます。行頭の /* コメント */ の直後に続けて書いた内容は継続行扱いになるので、新トラックにしたいときはコメントを前の行に分けてください。内容は自動保存されます。
 下のチェックボックスで再生するチャンネルを選べます（再生中の切替は即ミュート/復帰。伴奏付け・追い足しの対象はチェックに関係なく先頭トラック）。
 「記述を最適化」は選択範囲（未選択なら全体）の冗長な書き方を縮めます（l と同じ音長の明示指定を削除、絶対オクターブ指定を &gt; &lt; に変換）。l 指定の無い区間に4分音符があればトラックの頭に l4 を足して数字を省きます（c4 d4 e4 f4 → l4 c d e f）。最初に出てくる o は残すので、暗黙の初期値に依存する形にはなりません。音が変わらないことを検算してから適用します。

@@ -85,6 +85,13 @@ module.exports = {
     eq(locateError({ code: 'NOPE', params: {}, track: 0, pos: 10 }, blocks),
       'トラック1 2行目 5文字目: 不明なエラー (NOPE)');
   },
+  '英語表示ではエラー位置も英語で書く'() {
+    const en = loadCore(P, { language: 'en-US' });
+    const blocks = en.parseTrackBlocks('t120 c\nt120 d\n  e %');
+    let e = null;
+    try { P.play(blocks.map(b => b.mml)); } catch (err) { e = err; }
+    eq(en.locateError(e, blocks), 'Track 2, line 3, col 5: Unexpected character: "%"');
+  },
   'mml.js 以外のエラーは message をそのまま返す'() {
     eq(locateError(new Error('メロディに音符がありません'), parseTrackBlocks('c')),
       'メロディに音符がありません');
