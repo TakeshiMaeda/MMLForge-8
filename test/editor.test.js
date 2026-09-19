@@ -167,6 +167,39 @@ module.exports = {
     eq(r.rows[1].strays, 0);
   },
 
+  // ── 小節チェックの報告文（barReport） ──
+  '報告: 問題なければ小節数と同尺OKを並べる'() {
+    const r = check('t120 l4 c d e f | g a b >c\nt120 l4 o3 c2 g2 | c2 g2', 4);
+    const out = core.barReport(r, 4);
+    eq(out.html, '1小節 = 4拍 として判定\nch1  2.000小節  t120  8音\nch2  2.000小節  t120  4音\n全トラック同尺: OK');
+    eq(out.status, '小節チェック: 問題なし');
+  },
+  '報告: 無限ループは前奏と本体の内訳を添え、割り切れなければ「曲末で途中まで」'() {
+    const r = check('t120 l4 gggggggg\n\nt120 l4 [c c c]', 4);
+    const out = core.barReport(r, 4);
+    eq(out.html.split('\n')[2], 'ch2  2.000小節  t120  3音  （[ ]0 本体0.750小節 × 2.667回・曲末で途中まで）');
+  },
+  '報告: 要確認の箇所は span.ng で囲む'() {
+    const r = check('t120 l4 c d e f | g a b\nt120 l4 o3 c2 g2 | c2 g2', 4);
+    const out = core.barReport(r, 4);
+    ok(out.html.includes('<span class="ng">  ← 小節の整数倍になっていません</span>'));
+    ok(out.html.includes('<span class="ng">全トラック同尺: NG ← トラックごとに長さが違います</span>'));
+    eq(out.status, '小節チェック: 要確認');
+  },
+  '報告: 英語表示では英語で書く'() {
+    const en = loadCore(P, { language: 'en-US' });
+    en.ta.value = 't120 l4 c d e f | c d e f\nt120 l4 r32 c d e f | c d e f8..';
+    const out = en.barReport(en.barCheck(4), 4);
+    eq(out.html.split('\n'), [
+      'Checking with 4 beats per bar',
+      'ch1  2.000 bars  t120  8 notes',
+      'ch2  2.000 bars  t120  8 notes',
+      '     1 spot(s) off the bar lines (first: line 2, segment 1, at bar 1.031)',
+      'All tracks same length: OK',
+    ]);
+    eq(out.status, 'Bar check: OK');
+  },
+
   '6/8 は1小節3拍として数える'() {
     const r = check('t175 l8 c d e f g a | c d e f g a', 3);
     near(r.rows[0].bars, 2);

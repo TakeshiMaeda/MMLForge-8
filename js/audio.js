@@ -32,12 +32,12 @@ function audAnalyze(buffer, label) {
   });
   if (!events.length) {
     audOut.value = '';
-    audStatus.textContent = `${label}: 音を検出できませんでした（感度を上げる・大きめの音で試してください）`;
+    audStatus.textContent = T('aud.none', { label });
     return;
   }
   audOut.value = eventsToMML(events, +document.getElementById('audBpm').value,
                              +document.getElementById('audQuant').value);
-  audStatus.textContent = `${label}: ${events.length}音を検出しました`;
+  audStatus.textContent = T('aud.found', { label, n: events.length });
 }
 
 let micStream = null, micRecorder = null, micChunks = [], micRaf = 0;
@@ -50,7 +50,7 @@ micBtn.addEventListener('click', async () => {
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       });
     } catch (e) {
-      audStatus.textContent = 'マイクを取得できませんでした: ' + e.message;
+      audStatus.textContent = T('aud.micFail') + e.message;
       return;
     }
     const c = actx();
@@ -74,27 +74,27 @@ micBtn.addEventListener('click', async () => {
     micRecorder = new MediaRecorder(micStream);
     micRecorder.ondataavailable = (e) => { if (e.data.size) micChunks.push(e.data); };
     micRecorder.start();
-    micBtn.textContent = '■ マイク録音終了';
+    micBtn.textContent = T('aud.micStop');
     micBtn.classList.add('rec-on');
-    audStatus.textContent = '録音中… 検出音をリアルタイム表示します';
+    audStatus.textContent = T('aud.micRecording');
     audOut.value = '';
   } else {
     const rec = micRecorder;
     micRecorder = null;
     cancelAnimationFrame(micRaf);
     micNote.textContent = '';
-    micBtn.textContent = '● マイク録音';
+    micBtn.textContent = T('aud.micStart');
     micBtn.classList.remove('rec-on');
-    audStatus.textContent = '解析中…';
+    audStatus.textContent = T('aud.analyzing');
     rec.onstop = async () => {
       micStream.getTracks().forEach(t => t.stop());
       micStream = null;
       try {
         const blob = new Blob(micChunks, { type: rec.mimeType });
         const buffer = await actx().decodeAudioData(await blob.arrayBuffer());
-        audAnalyze(buffer, 'マイク録音');
+        audAnalyze(buffer, T('aud.micLabel'));
       } catch (e) {
-        audStatus.textContent = '解析に失敗しました: ' + e.message;
+        audStatus.textContent = T('aud.analyzeFail') + e.message;
       }
     };
     rec.stop();
@@ -104,13 +104,13 @@ micBtn.addEventListener('click', async () => {
 audFile.addEventListener('change', async () => {
   const f = audFile.files[0];
   if (!f) return;
-  audStatus.textContent = '解析中…';
+  audStatus.textContent = T('aud.analyzing');
   audOut.value = '';
   try {
     const buffer = await actx().decodeAudioData(await f.arrayBuffer());
     audAnalyze(buffer, f.name);
   } catch (e) {
-    audStatus.textContent = 'このファイルを読めませんでした: ' + e.message;
+    audStatus.textContent = T('aud.fileFail') + e.message;
   }
 });
 
@@ -118,12 +118,12 @@ document.getElementById('audCopy').addEventListener('click', () => {
   if (!audOut.value) return;
   audOut.select();
   document.execCommand('copy');
-  audStatus.textContent = 'コピーしました';
+  audStatus.textContent = T('common.copied');
 });
 document.getElementById('audInsert').addEventListener('click', () => {
   if (!audOut.value) return;
   const pos = ta.selectionStart ?? ta.value.length;
   applyText(ta.value.slice(0, pos) + audOut.value + ta.value.slice(pos));
-  audStatus.textContent = 'テキストエリアに挿入しました';
+  audStatus.textContent = T('common.inserted');
 });
 

@@ -54,8 +54,17 @@ function loadCore(MMLPlayer, opts = {}) {
   void navigator; void location;
   const src = [read('js/i18n.js'), read('js/mml-messages.js'), read('js/core.js')].join(';' + String.fromCharCode(10));
   const api = eval(src   // eslint-disable-line no-eval
-    + ';({ LANG, T, TEXT, stripComments, parseTrackBlocks, trackPos, locateError, mmlMessage, MML_MSG, barCheck, optimizeMML, ta })');
+    + ';({ LANG, T, TEXT, stripComments, parseTrackBlocks, trackPos, locateError, mmlMessage, MML_MSG, barCheck, barReport, playStatusText, optimizeMML, ta })');
   return { ...api, localStorage, document };
+}
+
+// mml-composer.js を評価する。雰囲気名や生成コメントは表示言語に従うので i18n.js を先に読む。
+// harmonize / extendMelody は MMLPlayer を使うので、呼ぶ側で global.MMLPlayer を用意すること
+function loadComposer(language = 'ja-JP') {
+  const dom = makeDom(language);
+  const { document, localStorage, navigator, location } = dom;
+  void document; void localStorage; void navigator; void location;
+  return eval([read('js/i18n.js'), read('js/mml-composer.js')].join(';' + String.fromCharCode(10)) + ';MMLComposer');   // eslint-disable-line no-eval
 }
 
 // i18n.js だけを評価する（言語の決め方と切り替えのテスト用）。
@@ -111,4 +120,4 @@ const throwsWith = (fn, want, msg) => {
   if (!e.message.includes(want)) fail(`${msg || ''}: 文言が違います\n      期待に含む: ${want}\n      実際      : ${e.message}`);
 };
 
-module.exports = { ROOT, read, loadPlayer, loadCore, loadI18n, ok, eq, near, throwsCode, throwsWith, Failed };
+module.exports = { ROOT, read, loadPlayer, loadCore, loadComposer, loadI18n, ok, eq, near, throwsCode, throwsWith, Failed };

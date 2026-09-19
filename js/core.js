@@ -2,7 +2,7 @@
 //  MML試聴（既存機能）
 // ─────────────────────────────────────────
 const SAMPLE = [
-  '; サンプル: きらきら星（行頭から始まる行=新トラック、行頭に空白=前のトラックの続き）',
+  T('sample.comment'),
   't120 l8 o5 @1 v11 q7 @e3,20,70,60',
   '  cc gg aa g4 | ff ee dd c4',
   '  [gg ff ee d4]2',
@@ -69,9 +69,9 @@ function playTracks(trks) {
 // 再生ステータス（無限ループ [ ]0 使用時はイントロとループ区間を分けて表示）
 function playStatusText(info) {
   if (info.loopStart > 0) {
-    return `再生中 (イントロ ${info.loopStart.toFixed(1)} 秒 + 1ループ ${(info.duration - info.loopStart).toFixed(1)} 秒)`;
+    return T('play.statusIntro', { intro: info.loopStart.toFixed(1), loop: (info.duration - info.loopStart).toFixed(1) });
   }
-  return `再生中 (1ループ ${info.duration.toFixed(1)} 秒)`;
+  return T('play.status', { loop: info.duration.toFixed(1) });
 }
 
 ta.value = localStorage.getItem('mmlforge8') || SAMPLE;
@@ -229,9 +229,9 @@ function optMatchBrackets(toks) {
   const stack = [];
   toks.forEach((tk, i) => {
     if (tk.type === '[') stack.push(i);
-    else if (tk.type === ']') { if (!stack.length) throw new Error('[ ] の対応が取れません'); pair[stack.pop()] = i; }
+    else if (tk.type === ']') { if (!stack.length) throw new Error(T('opt.unbalanced')); pair[stack.pop()] = i; }
   });
-  if (stack.length) throw new Error('[ ] の対応が取れません');
+  if (stack.length) throw new Error(T('opt.unbalanced'));
   return pair;
 }
 
@@ -248,7 +248,7 @@ function optSimulate(toks, pair, assumeL) {
   let steps = 0;
   const run = (from, to, s) => {
     for (let i = from; i < to; i++) {
-      if (++steps > 200000) throw new Error('リピートの展開が大きすぎます');
+      if (++steps > 200000) throw new Error(T('opt.tooLarge'));
       const tk = toks[i];
       if (tk.type === '[') {
         const end = pair[i];
@@ -364,7 +364,7 @@ function optimizeMML(text, selFrom, selTo) {
   let out = text;
   edits.forEach(e => { out = out.slice(0, e.start) + e.text + out.slice(e.end); });
   const after = parseTrackBlocks(out).map(b => MMLPlayer.parse(b.mml));
-  if (!sameNotes(before, after)) throw new Error('検算に失敗しました');
+  if (!sameNotes(before, after)) throw new Error(T('opt.verifyFailed'));
   return { out, nLen, nOct, nHead };
 }
 
@@ -377,21 +377,19 @@ document.getElementById('optMml').addEventListener('click', () => {
   try {
     tracks().forEach((m, i) => MMLPlayer.parse(m, i));
   } catch (e) {
-    error.textContent = '最適化の前にMMLのエラーを直してください — ' + locateError(e, parseTrackBlocks(text));
+    error.textContent = T('opt.fixFirst') + locateError(e, parseTrackBlocks(text));
     return;
   }
   let res;
   try {
     res = optimizeMML(text, selFrom, selTo);
   } catch (e) {
-    error.textContent = '最適化を中止しました（内容は変えていません） — '
-      + locateError(e, parseTrackBlocks(text));
+    error.textContent = T('opt.aborted') + locateError(e, parseTrackBlocks(text));
     return;
   }
-  if (!res) { status.textContent = '縮められる記述はありませんでした'; return; }
+  if (!res) { status.textContent = T('opt.nothing'); return; }
   applyText(res.out);
-  status.textContent = `最適化しました（音長${res.nLen}箇所・オクターブ${res.nOct}箇所`
-    + (res.nHead ? `・l4追加${res.nHead}トラック）` : '）');
+  status.textContent = T('opt.done', { len: res.nLen, oct: res.nOct, head: res.nHead });
 });
 // ── 小節チェック ────────────────────────────
 // 手書きMMLで一番多い事故は「1小節に入れる音符の数を間違える」こと。MMLとしては何も間違っていないので
@@ -484,6 +482,37 @@ function barCheck(beatsPerBar) {
   return { rows, allSame };
 }
 
+// 小節チェックの結果を報告にする。html は #barReport に入れる本文（要確認の箇所は span.ng で色を変える）、
+// status はステータス欄の一言
+function barReport(r, beats) {
+  const bad = (s) => `<span class="ng">${s}</span>`;
+  const out = [T('bar.header', { beats })];
+  r.rows.forEach(x => {
+    if (x.multiTempo) {
+      out.push(T('bar.rowSec', { ch: x.ch, sec: x.sec.toFixed(3), notes: x.notes })
+        + bad(T('bar.multiTempo', { tempos: x.multiTempo.join(' / t') })));
+      return;
+    }
+    let line = T('bar.row', { ch: x.ch, bars: x.bars.toFixed(3), tempo: x.tempo, notes: x.notes });
+    if (x.loop) {   // 無限ループは「前奏 + 本体×回数」の内訳を添える（1音でも曲末まで敷き詰まるため）
+      line += T('bar.loop', {
+        intro: x.loop.introBars > 1e-6 ? x.loop.introBars.toFixed(3) : null,
+        body: x.loop.bodyBars.toFixed(3), times: x.loop.times.toFixed(3), cut: !x.loop.fit,
+      });
+    }
+    if (Math.abs(x.bars - Math.round(x.bars)) > 1e-6) line += bad(T('bar.notWhole'));
+    if (x.strays) {
+      const where = T('bar.where', { no: x.first.no, part: x.first.part });
+      const s = T('bar.strays', { n: x.strays, where, bars: x.first.bars.toFixed(3) });
+      line += x.ok ? `\n   ${s}` : bad(`\n   ${s}`);
+    }
+    out.push(line);
+  });
+  out.push(r.allSame ? T('bar.sameOk') : bad(T('bar.sameNg')));
+  const ng = r.rows.some(x => x.multiTempo || !x.ok) || !r.allSame;
+  return { html: out.join('\n'), status: ng ? T('bar.statusNg') : T('bar.statusOk') };
+}
+
 document.getElementById('checkBars').addEventListener('click', () => {
   error.textContent = '';
   const rep = document.getElementById('barReport');
@@ -494,37 +523,13 @@ document.getElementById('checkBars').addEventListener('click', () => {
     r = barCheck(beats);
   } catch (e) {
     rep.textContent = '';
-    error.textContent = '小節チェックの前にMMLのエラーを直してください — ' + locateError(e, parseTrackBlocks(ta.value));
+    error.textContent = T('bar.fixFirst') + locateError(e, parseTrackBlocks(ta.value));
     return;
   }
-  if (!r.rows.length) { rep.textContent = ''; status.textContent = 'チェックするトラックがありません'; return; }
-
-  const bad = (s) => `<span class="ng">${s}</span>`;
-  const out = [`1小節 = ${beats}拍 として判定`];
-  r.rows.forEach(x => {
-    if (x.multiTempo) {
-      out.push(`ch${x.ch}  ${x.sec.toFixed(3)}秒  ${x.notes}音`
-        + bad(`  ← テンポが変わる（t${x.multiTempo.join(' / t')}）ので小節数を判定できません`));
-      return;
-    }
-    let line = `ch${x.ch}  ${x.bars.toFixed(3)}小節  t${x.tempo}  ${x.notes}音`;
-    if (x.loop) {   // 無限ループは「前奏 + 本体×回数」の内訳を添える（1音でも曲末まで敷き詰まるため）
-      const intro = x.loop.introBars > 1e-6 ? `前奏${x.loop.introBars.toFixed(3)}小節 + ` : '';
-      const cut = x.loop.fit ? '' : '・曲末で途中まで';
-      line += `  （[ ]0 ${intro}本体${x.loop.bodyBars.toFixed(3)}小節 × ${x.loop.times.toFixed(3)}回${cut}）`;
-    }
-    if (Math.abs(x.bars - Math.round(x.bars)) > 1e-6) line += bad('  ← 小節の整数倍になっていません');
-    if (x.strays) {
-      const where = `${x.first.no}行目` + (x.first.part ? `の${x.first.part}つ目` : '');
-      const s = `  小節線に乗らない箇所 ${x.strays}件（最初は${where}・${x.first.bars.toFixed(3)}小節の位置）`;
-      line += x.ok ? `\n   ${s}` : bad(`\n   ${s}`);
-    }
-    out.push(line);
-  });
-  out.push(r.allSame ? '全トラック同尺: OK' : bad('全トラック同尺: NG ← トラックごとに長さが違います'));
-  rep.innerHTML = out.join('\n');
-  const ng = r.rows.some(x => x.multiTempo || !x.ok) || !r.allSame;
-  status.textContent = ng ? '小節チェック: 要確認' : '小節チェック: 問題なし';
+  if (!r.rows.length) { rep.textContent = ''; status.textContent = T('bar.noTracks'); return; }
+  const out = barReport(r, beats);
+  rep.innerHTML = out.html;
+  status.textContent = out.status;
 });
 
 // mml.js に渡せる形（コメント除去済み・1行=1トラック）でクリップボードへ。
@@ -533,7 +538,7 @@ document.getElementById('checkBars').addEventListener('click', () => {
 document.getElementById('copyMml').addEventListener('click', () => {
   error.textContent = '';
   const trks = tracks();
-  if (!trks.length) { status.textContent = 'コピーするトラックがありません'; return; }
+  if (!trks.length) { status.textContent = T('copy.noTracks'); return; }
   const el = document.createElement('textarea');
   el.value = trks.join('\n') + '\n';
   el.style.position = 'fixed';
@@ -542,11 +547,11 @@ document.getElementById('copyMml').addEventListener('click', () => {
   el.select();
   document.execCommand('copy');
   document.body.removeChild(el);
-  status.textContent = `mml.js用に整形してコピーしました（${trks.length}トラック）`;
+  status.textContent = T('copy.done', { n: trks.length });
 });
 document.getElementById('stop').addEventListener('click', () => {
   MMLPlayer.stop();
-  status.textContent = '停止';
+  status.textContent = T('common.stopped');
 });
 vol.addEventListener('input', () => MMLPlayer.setVolume(vol.value / 100));
 

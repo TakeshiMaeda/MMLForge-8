@@ -4,12 +4,12 @@
 //  同時打鍵はトラックを分けて表現し、打点のないトラックはMML出力から除外して詰める
 // ─────────────────────────────────────────
 const DRUM_PRESETS = {
-  kick:  { label: 'キック',     w: 4, o: 3, v: 9, q: 8, env: '1,90,0,50' },
-  snare: { label: 'スネア',     w: 4, o: 5, v: 8, q: 8, env: '1,120,0,60' },
-  hatc:  { label: 'ハット(閉)', w: 4, o: 7, v: 6, q: 8, env: '1,30,0,25' },
-  hato:  { label: 'ハット(開)', w: 4, o: 7, v: 6, q: 8, env: '1,150,0,90' },
-  tom:   { label: 'タム',       w: 4, o: 4, v: 8, q: 8, env: '1,100,0,60' },
-  clap:  { label: 'クラップ風', w: 4, o: 6, v: 8, q: 8, env: '1,80,0,50' },
+  kick:  { label: T('drum.kick'),      w: 4, o: 3, v: 9, q: 8, env: '1,90,0,50' },
+  snare: { label: T('drum.snare'),     w: 4, o: 5, v: 8, q: 8, env: '1,120,0,60' },
+  hatc:  { label: T('drum.hatClosed'), w: 4, o: 7, v: 6, q: 8, env: '1,30,0,25' },
+  hato:  { label: T('drum.hatOpen'),   w: 4, o: 7, v: 6, q: 8, env: '1,150,0,90' },
+  tom:   { label: T('drum.tom'),       w: 4, o: 4, v: 8, q: 8, env: '1,100,0,60' },
+  clap:  { label: T('drum.clap'),      w: 4, o: 6, v: 8, q: 8, env: '1,80,0,50' },
 };
 const DR_CH = 4, DR_MAX_STEPS = 64;   // 16分 × 最大4小節
 
@@ -185,7 +185,7 @@ function renderDrumPad() {
     const sel = document.createElement('select');
     const manOp = document.createElement('option');
     manOp.value = '';
-    manOp.textContent = '(手動)';
+    manOp.textContent = T('drum.manual');
     manOp.hidden = true;   // 手動調整状態の表示専用（一覧には出さない）
     sel.appendChild(manOp);
     Object.entries(DRUM_PRESETS).forEach(([id, p]) => {
@@ -196,7 +196,7 @@ function renderDrumPad() {
     });
     if (drum.insts.length) {
       const og = document.createElement('optgroup');
-      og.label = 'ユーザー定義';
+      og.label = T('drum.userGroup');
       drum.insts.forEach(inst => {
         const op = document.createElement('option');
         op.value = 'u:' + inst.name;
@@ -214,16 +214,16 @@ function renderDrumPad() {
       wSel.appendChild(op);
     });
     wSel.value = tr.w;
-    wSel.title = '波形 @0-4（noise以外は o の音程で鳴る）';
+    wSel.title = T('drum.tipWave');
     const oIn = document.createElement('input');
     oIn.value = drumPitchStr(tr); oIn.style.width = '48px';
-    oIn.title = '音程（音名+オクターブ。例: c5, f#4。ノイズはバンドパス中心の微調整になる）';
+    oIn.title = T('drum.tipPitch');
     const vIn = document.createElement('input');
-    vIn.type = 'number'; vIn.min = 0; vIn.max = 15; vIn.value = tr.v; vIn.style.width = '42px'; vIn.title = '音量 v0-15';
+    vIn.type = 'number'; vIn.min = 0; vIn.max = 15; vIn.value = tr.v; vIn.style.width = '42px'; vIn.title = T('drum.tipVol');
     const qIn = document.createElement('input');
-    qIn.type = 'number'; qIn.min = 1; qIn.max = 8; qIn.value = tr.q; qIn.style.width = '42px'; qIn.title = 'ゲート q1-8（小さいとDecayを切り詰めて短く硬い音になる）';
+    qIn.type = 'number'; qIn.min = 1; qIn.max = 8; qIn.value = tr.q; qIn.style.width = '42px'; qIn.title = T('drum.tipGate');
     const eIn = document.createElement('input');
-    eIn.value = tr.env; eIn.style.width = '92px'; eIn.title = 'エンベロープ @e a,d,s,r';
+    eIn.value = tr.env; eIn.style.width = '92px'; eIn.title = T('drum.tipEnv');
     sel.addEventListener('change', () => {
       const p = drumInstOf(sel.value);
       if (!p) return;
@@ -246,10 +246,10 @@ function renderDrumPad() {
     qIn.addEventListener('input', () => { tr.q = Math.max(1, Math.min(8, +qIn.value || 8)); manual(); drChanged(); });
     eIn.addEventListener('input', () => { tr.env = eIn.value.trim(); manual(); drChanged(); });
     const regBtn = document.createElement('button');
-    regBtn.textContent = '登録';
-    regBtn.title = 'この行の現在の音（@/o/v/q/@e）をユーザー楽器として登録';
+    regBtn.textContent = T('drum.register');
+    regBtn.title = T('drum.tipRegister');
     regBtn.addEventListener('click', () => {
-      const name = (window.prompt('登録する楽器名（同名は上書き）', '') || '').trim();
+      const name = (window.prompt(T('drum.promptName'), '') || '').trim();
       if (!name) return;
       const inst = { name, w: tr.w, n: tr.n, o: tr.o, v: tr.v, q: tr.q, env: tr.env };
       const idx = drum.insts.findIndex(i => i.name === name);
@@ -257,23 +257,23 @@ function renderDrumPad() {
       tr.preset = 'u:' + name;
       drSave();
       renderDrumPad();
-      drStatus.textContent = `楽器「${name}」を登録しました`;
+      drStatus.textContent = T('drum.registered', { name });
     });
     const delBtn = document.createElement('button');
     delBtn.textContent = '✕';
-    delBtn.title = '選択中のユーザー楽器を削除';
+    delBtn.title = T('drum.tipDelete');
     delBtn.addEventListener('click', () => {
       if (!tr.preset.startsWith('u:')) {
-        drStatus.textContent = 'ユーザー定義楽器を選択している行でのみ削除できます';
+        drStatus.textContent = T('drum.deleteOnlyUser');
         return;
       }
       const name = tr.preset.slice(2);
-      if (!window.confirm(`楽器「${name}」を削除しますか？`)) return;
+      if (!window.confirm(T('drum.confirmDelete', { name }))) return;
       drum.insts = drum.insts.filter(i => i.name !== name);
       drum.tracks.forEach(t2 => { if (t2.preset === 'u:' + name) t2.preset = ''; });
       drSave();
       renderDrumPad();
-      drStatus.textContent = `楽器「${name}」を削除しました`;
+      drStatus.textContent = T('drum.deleted', { name });
     });
     head.appendChild(sel); head.appendChild(wSel); head.appendChild(oIn); head.appendChild(vIn); head.appendChild(qIn); head.appendChild(eIn);
     head.appendChild(regBtn); head.appendChild(delBtn);
@@ -315,34 +315,34 @@ document.getElementById('drBars').addEventListener('change', () => {
 });
 document.getElementById('drPlay').addEventListener('click', () => {
   const trks = drumToTracks();
-  if (!trks.length) { drStatus.textContent = '打点がありません'; return; }
+  if (!trks.length) { drStatus.textContent = T('drum.noHits'); return; }
   try {
     MMLPlayer.play(trks, { loop: true });
-    drStatus.textContent = 'パターン再生中';
+    drStatus.textContent = T('drum.playing');
   } catch (e) {
     drStatus.textContent = e.code ? mmlMessage(e) : e.message;   // パッドのMMLは本編と別なので位置は出さない
   }
 });
 document.getElementById('drStop').addEventListener('click', () => {
   MMLPlayer.stop();
-  drStatus.textContent = '停止';
+  drStatus.textContent = T('common.stopped');
 });
 document.getElementById('drClear').addEventListener('click', () => {
   drum.grid = Array.from({ length: DR_CH }, () => Array(DR_MAX_STEPS).fill(false));
   drSave();
   renderDrumPad();
-  drStatus.textContent = 'クリアしました';
+  drStatus.textContent = T('drum.cleared');
 });
 document.getElementById('drCopy').addEventListener('click', () => {
   if (!drOut.value) return;
   drOut.select();
   document.execCommand('copy');
-  drStatus.textContent = 'コピーしました';
+  drStatus.textContent = T('common.copied');
 });
 document.getElementById('drInsert').addEventListener('click', () => {
   const trks = drumToTracks();
-  if (!trks.length) { drStatus.textContent = '打点がありません'; return; }
+  if (!trks.length) { drStatus.textContent = T('drum.noHits'); return; }
   applyText(ta.value.trimEnd() + '\n\n' + trks.join('\n') + '\n');
-  drStatus.textContent = '本編末尾にトラックを追加しました';
+  drStatus.textContent = T('drum.inserted');
 });
 

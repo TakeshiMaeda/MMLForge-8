@@ -3,7 +3,14 @@
 // 初回はブラウザの言語で決めて保存し、次からは保存した言語。
 // 切り替えボタンで変えたら保存してページを読み直す。
 'use strict';
-const { loadI18n, eq, ok } = require('./helper');
+const fs = require('fs');
+const path = require('path');
+const { ROOT, read, loadI18n, eq, ok } = require('./helper');
+const { jpLiterals, usedTextKeys, literals } = require('./scan');
+
+// 画面用の JS（文言表そのものの i18n.js と mml-messages.js は除く）
+const jsFiles = () => fs.readdirSync(path.join(ROOT, 'js')).filter(f => f.endsWith('.js')).map(f => 'js/' + f);
+const uiFiles = () => jsFiles().filter(f => f !== 'js/i18n.js' && f !== 'js/mml-messages.js');
 
 module.exports = {
 
@@ -71,6 +78,33 @@ module.exports = {
   '表に無いキーはキーそのものを返す（表示が空にならないように）'() {
     eq(loadI18n({ language: 'en-US' }).T('no.such.key'), 'no.such.key');
   },
+  // ── ソースとの突き合わせ（文字列を足したときの書き忘れを落とす） ──
+  '画面用の JS と mml.js に日本語の文字列が残っていない（文言は T() で取る）'() {
+    const left = [];
+    uiFiles().concat(['mml.js']).forEach(f => {
+      jpLiterals(read(f)).forEach(x => left.push(`${f}:${x.line} ${x.text}`));
+    });
+    eq(left, [], '日本語の文字列は js/i18n.js の TEXT に移して T() で取ること');
+  },
+  'JS で使っている T(キー) はすべて文言表にある'() {
+    const { TEXT } = loadI18n({ language: 'ja-JP' });
+    const missing = [];
+    jsFiles().forEach(f => {
+      usedTextKeys(read(f)).forEach(k => { if (!(k in TEXT.ja)) missing.push(`${f}: ${k}`); });
+    });
+    eq(missing, [], '文言表（js/i18n.js の TEXT）に無いキー');
+  },
+  '文言表のキーはすべてどこかで使われている'() {
+    const { TEXT } = loadI18n({ language: 'ja-JP' });
+    const seen = new Set();
+    uiFiles().forEach(f => {
+      usedTextKeys(read(f)).forEach(k => seen.add(k));
+      literals(read(f)).forEach(x => seen.add(x.text.slice(1, -1)));   // T() 以外で渡すキーも数える
+    });
+    const unused = Object.keys(TEXT.ja).filter(k => !seen.has(k));
+    eq(unused, [], '使われていないキー（消すこと）');
+  },
+
   '日本語と英語で同じキーを持つ（片方だけ足すと落ちる）'() {
     const { TEXT } = loadI18n({ language: 'ja-JP' });
     const ja = Object.keys(TEXT.ja).sort(), en = Object.keys(TEXT.en).sort();

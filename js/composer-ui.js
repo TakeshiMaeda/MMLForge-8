@@ -61,7 +61,7 @@ document.getElementById('genUndo').addEventListener('click', () => {
   const cur = ta.value;
   applyText(genUndoBuf);
   genUndoBuf = cur;
-  status.textContent = '入れ替えました';
+  status.textContent = T('gen.swapped');
 });
 
 // メロディ伴奏付け
@@ -69,7 +69,7 @@ function doHarmonize(seed) {
   document.getElementById('harmSeed').value = seed;
   const block = parseTrackBlocks(ta.value)[0];
   if (!block) {
-    error.textContent = 'メロディが見つかりません（コメント以外のMML行が必要です）';
+    error.textContent = T('gen.noMelody');
     return;
   }
   const melody = block.mml;
@@ -87,7 +87,7 @@ function doHarmonize(seed) {
     const melodyText = ta.value.split('\n').slice(block.start, block.end + 1).join('\n');
     applyText(res.comment + '\n' + melodyText + '\n\n' + res.tracks.join('\n\n'));
     const info = playTracks([melody, ...res.tracks]);
-    status.textContent = playStatusText(info) + (res.warning ? ' ※' + res.warning : '');
+    status.textContent = playStatusText(info) + (res.warning ? T('common.warn', { msg: res.warning }) : '');
   } catch (e) {
     status.textContent = '';
     showError(e);   // メロディ(先頭トラック)の記法エラーは原文の行・文字位置で示す
@@ -103,7 +103,7 @@ function doExtend(seed) {
   document.getElementById('extSeed').value = seed;
   const block = parseTrackBlocks(ta.value)[0];
   if (!block) {
-    error.textContent = 'メロディが見つかりません（コメント以外のMML行が必要です）';
+    error.textContent = T('gen.noMelody');
     return;
   }
   error.textContent = '';
@@ -126,7 +126,7 @@ function doExtend(seed) {
     const lines = ta.value.split('\n');
     lines.splice(block.end + 1, 0, '  | ' + res.added);
     applyText(lines.join('\n'));
-    status.textContent = `メロディに${bars}小節追い足しました（「元に戻す」で取り消し可）` + (res.warning ? ' ※' + res.warning : '');
+    status.textContent = T('gen.extended', { bars }) + (res.warning ? T('common.warn', { msg: res.warning }) : '');
   } catch (e) {
     status.textContent = '';
     showError(e);

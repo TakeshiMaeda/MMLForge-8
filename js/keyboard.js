@@ -49,7 +49,7 @@ function kbSettings() {
 }
 function kbUpdatePrefix() {
   const s = kbSettings();
-  kbPrefix.textContent = `MML指定: @${s.wave} v${s.vol} @e${s.a},${s.d},${s.s},${s.r}`;
+  kbPrefix.textContent = T('kb.prefix', s);
   localStorage.setItem('mmlforge8-kbset', JSON.stringify(s));
 }
 (function kbLoadSettings() {

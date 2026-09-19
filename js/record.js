@@ -11,20 +11,20 @@ recBtn.addEventListener('click', () => {
   if (!recording) {
     recording = true;
     recEvents = [];
-    recBtn.textContent = '■ 録音終了';
+    recBtn.textContent = T('rec.stop');
     recBtn.classList.add('rec-on');
-    recStatus.textContent = '録音中… 最初の打鍵が時刻0になります';
+    recStatus.textContent = T('rec.recording');
     recOut.value = '';
   } else {
     recording = false;
-    recBtn.textContent = '● 録音開始';
+    recBtn.textContent = T('rec.start');
     recBtn.classList.remove('rec-on');
     const now = performance.now() / 1000;
     recEvents.forEach(ev => { if (ev.tOff === null) ev.tOff = now; });
     try {
       recOut.value = eventsToMML(recEvents, +document.getElementById('recBpm').value,
                                  +document.getElementById('recQuant').value);
-      recStatus.textContent = recEvents.length ? `${recEvents.length}音を変換しました` : '';
+      recStatus.textContent = recEvents.length ? T('rec.converted', { n: recEvents.length }) : '';
     } catch (e) {
       recStatus.textContent = e.message;
     }
@@ -33,7 +33,7 @@ recBtn.addEventListener('click', () => {
 
 // グリッド量子化して単音MMLに変換
 function eventsToMML(events, bpm, minDiv) {
-  if (!events.length) throw new Error('録音された音がありません');
+  if (!events.length) throw new Error(T('rec.empty'));
   // グリッド1単位 = 最小音符の秒数
   const grid = (60 / bpm) * (4 / minDiv);
   // グリッド単位数 → MML音長トークン（付点含む。表現できない長さは floor 分割し残りを休符に）
@@ -89,12 +89,12 @@ document.getElementById('copyOut').addEventListener('click', () => {
   if (!recOut.value) return;
   recOut.select();
   document.execCommand('copy');
-  recStatus.textContent = 'コピーしました';
+  recStatus.textContent = T('common.copied');
 });
 document.getElementById('insertOut').addEventListener('click', () => {
   if (!recOut.value) return;
   const pos = ta.selectionStart ?? ta.value.length;
   applyText(ta.value.slice(0, pos) + recOut.value + ta.value.slice(pos));
-  recStatus.textContent = 'テキストエリアに挿入しました';
+  recStatus.textContent = T('common.inserted');
 });
 

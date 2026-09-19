@@ -1,4 +1,5 @@
-// MMLForge-8 / MMLComposer — 定石ベースの自動作曲器（外部依存なし。harmonize のみ MMLPlayer.parse を使用）
+// MMLForge-8 / MMLComposer — 定石ベースの自動作曲器（harmonize / extendMelody は MMLPlayer.parse を使用。
+// 雰囲気名・生成コメント・警告の文言は js/i18n.js の T() で表示言語に合わせる）
 // アルゴリズム:
 //   1. 雰囲気プリセット(MOODS)がスケール・テンポ帯・コード進行プール・音色/エンベロープの初期値を決める
 //      （scale / tempo / density / drums / drumStyle / harm は opts で個別に上書き可能）
@@ -34,7 +35,7 @@ const MMLComposer = (() => {
 
   const MOODS = {
     calm: {
-      label: 'しずか・おだやか', scale: 'minor', tempo: [78, 100],
+      label: T('mood.calm'), scale: 'minor', tempo: [78, 100],
       progs: [[1, 7, 6, 5], [1, 6, 3, 7], [1, 4, 6, 5], [1, 6, 4, 5], [1, 3, 6, 5]],
       density: 0, drums: false, harm: false,
       mel:  { wave: 2, oct: 4, vol: 10, q: 7, env: '@e8,120,55,250' },
@@ -42,7 +43,7 @@ const MMLComposer = (() => {
       arp:  { wave: 0, oct: 5, vol: 5,  q: 8, env: '@e5,0,100,100' },
     },
     mystic: {
-      label: '幻想・浮遊', scale: 'dorian', tempo: [104, 126],
+      label: T('mood.mystic'), scale: 'dorian', tempo: [104, 126],
       progs: [[1, 4, 1, 5], [1, 7, 4, 1], [1, 4, 7, 1], [1, 2, 4, 5]],
       density: 1, drums: false, harm: false,
       mel:  { wave: 1, oct: 4, vol: 10, q: 7, env: '@e5,60,65,120' },
@@ -50,7 +51,7 @@ const MMLComposer = (() => {
       arp:  { wave: 0, oct: 5, vol: 5,  q: 8, env: '@e5,0,100,80' },
     },
     intense: {
-      label: '疾走・激しい', scale: 'minor', tempo: [138, 168],
+      label: T('mood.intense'), scale: 'minor', tempo: [138, 168],
       progs: [[1, 1, 6, 7], [1, 7, 6, 7], [1, 6, 7, 1], [1, 4, 5, 7]],
       density: 2, drums: true, harm: false,
       mel:  { wave: 1, oct: 5, vol: 10, q: 7, env: '@e3,40,70,60' },
@@ -58,7 +59,7 @@ const MMLComposer = (() => {
       arp:  { wave: 2, oct: 4, vol: 6,  q: 8, env: '@e3,0,100,50' },
     },
     dark: {
-      label: '緊迫・不穏', scale: 'minor', tempo: [150, 176],
+      label: T('mood.dark'), scale: 'minor', tempo: [150, 176],
       progs: [[1, 2, 1, 7], [1, 6, 2, 7], [1, 7, 1, 2], [1, 4, 2, 7]],
       density: 2, drums: true, harm: true,
       mel:  { wave: 1, oct: 5, vol: 10, q: 7, env: '@e3,30,75,50' },
@@ -67,7 +68,7 @@ const MMLComposer = (() => {
       harmT: { wave: 0, oct: 5, vol: 4, q: 8, env: '@e20,200,60,400' },
     },
     bright: {
-      label: '明るい・陽気', scale: 'major', tempo: [116, 140],
+      label: T('mood.bright'), scale: 'major', tempo: [116, 140],
       progs: [[1, 5, 6, 4], [1, 4, 5, 1], [1, 6, 4, 5], [1, 4, 1, 5]],
       density: 1, drums: false, harm: false,
       mel:  { wave: 1, oct: 5, vol: 10, q: 7, env: '@e4,60,65,100' },
@@ -334,7 +335,10 @@ const MMLComposer = (() => {
 
     const keyName = NOTE_NAMES[keyPc].toUpperCase() + (m.scale === 'major' ? '' : 'm');
     const progName = prog.join('-');
-    const comment = `; 自動生成: ${m.label} / key=${keyName}(${m.scale}) / t${tempo} / 進行${progName} / ${bars}小節 / seed=${seed}${m.harm ? ' / ハーモニー' : ''}${useDrums ? ` / リズムch(${drumStyle})` : ''}`;
+    const comment = T('gen.comment', {
+      mood: m.label, key: keyName, scale: m.scale, tempo, prog: progName, bars, seed,
+      harm: m.harm, drums: useDrums, drumStyle,
+    });
     return { tracks, comment };
   }
 
@@ -399,13 +403,13 @@ const MMLComposer = (() => {
   // 戻り値: { tracks: string[](伴奏のみ), comment, warning|null }
   function harmonize(melodyMML, opts = {}) {
     if (typeof MMLPlayer === 'undefined' || !MMLPlayer.parse) {
-      throw new Error('MMLPlayer.parse が見つかりません（mml.js を先に読み込んでください）');
+      throw new Error(T('comp.noPlayer'));
     }
     const seed = (opts.seed ?? 1) >>> 0;
     const rand = mulberry32(seed === 0 ? 1 : seed);
 
     const { notes, duration, tempo } = MMLPlayer.parse(melodyMML);
-    if (!notes.length) throw new Error('メロディに音符がありません');
+    if (!notes.length) throw new Error(T('comp.noNotes'));
 
     const { keyPc, scale: scaleName } = detectKey(notes);
     const barSec = 4 * 60 / tempo;
@@ -425,10 +429,12 @@ const MMLComposer = (() => {
     if (useDrums) tracks.push(genDrums(rand, nBars, tempo, drumStyle));
 
     const keyName = NOTE_NAMES[keyPc].toUpperCase() + (scaleName === 'major' ? '' : 'm');
-    const comment = `; 伴奏付け: key=${keyName}(${scaleName}) / t${tempo} / 進行${prog.join('-')} / ${nBars}小節 / seed=${seed} / 雰囲気=${m.label}`;
+    const comment = T('harm.comment', {
+      key: keyName, scale: scaleName, tempo, prog: prog.join('-'), bars: nBars, seed, mood: m.label,
+    });
     const offBar = Math.abs(nBars * barSec - duration) > 0.01;
     const warning = offBar
-      ? `メロディが4/4×${nBars}小節ちょうどではありません。末尾を r で埋めるとループが揃います`
+      ? T('harm.offBar', { bars: nBars })
       : null;
     return { tracks, comment, warning };
   }
@@ -448,10 +454,10 @@ const MMLComposer = (() => {
   //   同じメロディ+同じ設定なら同じ結果。追い足すたびに元の小節数が変わるので、連続実行では毎回違う小節が出る
   function extendMelody(melodyMML, opts = {}) {
     if (typeof MMLPlayer === 'undefined' || !MMLPlayer.parse) {
-      throw new Error('MMLPlayer.parse が見つかりません（mml.js を先に読み込んでください）');
+      throw new Error(T('comp.noPlayer'));
     }
     const { notes, duration, tempo } = MMLPlayer.parse(melodyMML);
-    if (!notes.length) throw new Error('メロディに音符がありません');
+    if (!notes.length) throw new Error(T('comp.noNotes'));
 
     const { keyPc, scale: detScale } = detectKey(notes);
     // コード推定は元メロディのスケールで行い、生成は指定スケールで行う（同主調転調）
@@ -487,7 +493,7 @@ const MMLComposer = (() => {
     for (const [len, beats] of LENS_DESC) {
       while (gap >= beats - 1e-6) { padTokens.push('r' + len); gap -= beats; }
     }
-    const warning = gap > 1e-3 ? 'メロディ末尾に16分未満の端数があります。追加小節の頭が少しずれます' : null;
+    const warning = gap > 1e-3 ? T('ext.fraction') : null;
 
     // 推定した進行を循環継続して続きの小節を生成
     const outBars = [];
