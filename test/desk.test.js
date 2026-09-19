@@ -128,6 +128,51 @@ module.exports = {
     eq(D.deskSnap(r, [o], W, H), r);
   },
 
+  // ── 整列（開いているウインドウを、大きさはそのままで重ならないように並べ直す） ──
+  '整列: 開いているウインドウは重ならず、画面の幅に収まる'() {
+    // 決まった乱数で、ばらばらに散らかした配置を何通りも試す
+    let seed = 12345;
+    const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+    for (let n = 0; n < 50; n++) {
+      const st = {};
+      D.DESK_WINS.forEach((id, i) => {
+        st[id] = { x: Math.round(rnd() * 900), y: Math.round(rnd() * 500), w: 220 + Math.round(rnd() * 500),
+          h: 60 + Math.round(rnd() * 400), z: i + 1, min: rnd() < 0.2, closed: rnd() < 0.3 };
+      });
+      const A = D.deskArrange(st, W);
+      const open = D.DESK_WINS.filter(id => !A[id].closed);
+      open.forEach(id => {
+        const r = shown(A[id]);
+        ok(r.x >= D.DESK_GAP && r.x + r.w <= W - D.DESK_GAP && r.y >= D.DESK_GAP, `${n}: ${id} が画面の幅からはみ出す ${JSON.stringify(r)}`);
+      });
+      for (let i = 0; i < open.length; i++) {
+        for (let j = i + 1; j < open.length; j++) {
+          ok(!overlaps(shown(A[open[i]]), shown(A[open[j]])), `${n}: ${open[i]} と ${open[j]} が重なる`);
+        }
+      }
+    }
+  },
+  '整列: 大きさ・開閉・最小化は変えず、閉じているウインドウは動かさない'() {
+    const st = D.deskDefaultLayout(W, H);
+    st.winKb = { ...st.winKb, closed: false, x: 700, y: 300 };   // 鍵盤を開いて散らかす
+    const A = D.deskArrange(st, W);
+    D.DESK_WINS.forEach(id => {
+      eq([A[id].w, A[id].h, A[id].min, A[id].closed], [st[id].w, st[id].h, st[id].min, st[id].closed], id);
+      if (st[id].closed) eq([A[id].x, A[id].y], [st[id].x, st[id].y], `${id} は閉じているので動かさない`);
+    });
+  },
+  '整列: 一番左上にあったウインドウが左上に来る（元の並びの順に詰める）'() {
+    const st = D.deskDefaultLayout(W, H);
+    st.winGen = { ...st.winGen, x: 5, y: 3 };   // ガチャを一番左上に
+    const A = D.deskArrange(st, W);
+    eq([A.winGen.x, A.winGen.y], [D.DESK_GAP, D.DESK_GAP]);
+  },
+  '整列: 画面より幅の広いウインドウは画面の幅に収める'() {
+    const st = D.deskDefaultLayout(W, H);
+    st.winEditor = { ...st.winEditor, w: 5000 };
+    eq(D.deskArrange(st, W).winEditor.w, W - 2 * D.DESK_GAP);
+  },
+
   // ── 保存データ ──
   '保存データが壊れていたら使わない'() {
     eq(D.deskParse('{壊れた'), null);

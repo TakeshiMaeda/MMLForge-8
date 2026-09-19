@@ -4,7 +4,9 @@
 //  各機能は .win のウインドウ。タイトルバーをドラッグで移動、右下の角で大きさ変更（CSS の resize）、
 //  クリックで最前面、タイトルバーのダブルクリックか「_」で最小化（タイトルバーだけ残す）、「×」で閉じる。
 //  閉じたウインドウは上部の「ウインドウ」メニューから開き直す。
-//  位置・大きさ・状態は localStorage に保存し、次回も同じ配置で開く。「整列」で初期配置に戻す。
+//  位置・大きさ・状態は localStorage に保存し、次回も同じ配置で開く。
+//  「整列」は開いているウインドウを大きさはそのままで重ならないように並べ直し、
+//  「初期化」は位置・大きさ・開閉をすべて初期配置に戻す。
 //  ドラッグ中はワークスペースの端とほかのウインドウの端に吸着する（Alt を押している間は吸着しない）。
 //  画面が狭いとき（NARROW 以下）はウインドウをやめて縦に並べる（CSS 側。ドラッグもしない）。
 //  下部のヒントバーには、マウスを載せた部品の title を出す。
@@ -88,6 +90,53 @@ function deskSnap(r, others, W, H, d = DESK_SNAP) {
     if (overlap(r.x, r.x + r.w, o.x, o.x + o.w)) ys.push(o.y + o.h + g, o.y - g - r.h);
   });
   return { ...r, x: best(r.x, xs), y: best(r.y, ys) };
+}
+
+// 整列: 開いているウインドウを、大きさはそのままで重ならないように並べ直す。
+//   今の位置の順（上から。40px 以内の差は同じ段とみなして左から）に、左上から詰めていく。
+//   置き場所は「スカイライン」（横位置ごとに、そこまで埋まった下端）で決め、幅が入る範囲で一番上を選ぶ。
+//   背の低いウインドウの下に空きができれば、後のウインドウがそこへ入る。
+//   閉じているウインドウは動かさない。大きさ・開閉・最小化は変えない（画面より広いものだけ幅を縮める）。
+//   最小化しているウインドウは、見えている高さ（タイトルバー）で並べる
+function deskArrange(state, W) {
+  const g = DESK_GAP;
+  const right = W - g;
+  const out = {};
+  Object.keys(state).forEach(id => { out[id] = { ...state[id] }; });
+  const row = (id) => Math.round(state[id].y / 40);
+  const open = Object.keys(state).filter(id => !state[id].closed)
+    .sort((a, b) => (row(a) - row(b)) || (state[a].x - state[b].x));
+
+  let sky = [{ x: g, w: right - g, y: g }];
+  // [x, x+w) の下端を y にする（はみ出した分は画面の右端で切る）
+  const fill = (x, w, y) => {
+    const xe = Math.min(x + w, right);
+    const next = [];
+    sky.forEach(t => {
+      const te = t.x + t.w;
+      if (te <= x || t.x >= xe) { next.push(t); return; }
+      if (t.x < x) next.push({ x: t.x, w: x - t.x, y: t.y });
+      if (te > xe) next.push({ x: xe, w: te - xe, y: t.y });
+    });
+    next.push({ x, w: xe - x, y });
+    sky = next.sort((a, b) => a.x - b.x);
+  };
+  open.forEach(id => {
+    const s = out[id];
+    s.w = Math.min(s.w, right - g);
+    const h = s.min ? DESK_BAR : s.h;
+    let best = null;
+    sky.forEach(seg => {
+      const x = seg.x;
+      if (x + s.w > right) return;
+      const y = Math.max(...sky.filter(t => t.x < x + s.w && t.x + t.w > x).map(t => t.y));
+      if (!best || y < best.y || (y === best.y && x < best.x)) best = { x, y };
+    });
+    s.x = best.x;
+    s.y = best.y;
+    fill(s.x, s.w + g, s.y + h + g);   // 右と下に間隔をあけて埋める
+  });
+  return out;
 }
 
 // 保存データを読む。JSON として壊れていれば null。知らない id や、数値でない・小さすぎる値のウインドウは捨てる
@@ -288,7 +337,16 @@ function deskInit() {
     saveTimer = setTimeout(save, 300);
   });
 
-  // ── 整列（初期配置に戻す） ──
+  // ── 整列（開いているウインドウを重ならないように並べ直す） ──
+  document.getElementById('deskArrange').addEventListener('click', () => {
+    if (narrow()) return;   // 縦に並べる表示では位置を使わない
+    state = deskArrange(state, size().W);
+    ids().forEach(apply);
+    markFront();
+    save();
+  });
+
+  // ── 初期化（位置・大きさ・開閉をすべて初期配置に戻す） ──
   document.getElementById('deskReset').addEventListener('click', () => {
     const { W, H } = layoutSize();
     state = deskDefaultLayout(W, H);
