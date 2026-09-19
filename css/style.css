@@ -181,7 +181,8 @@ code { font-family: var(--mono); color: var(--warn); }
 }
 .bkey.active { background: var(--accent); }
 .bkey .kc { position: absolute; bottom: 3px; width: 100%; text-align: center; color: #889; font-size: 9px; }
-#kbNow { min-width: 3em; font: 14px var(--mono); color: var(--warn); }   /* 幅を確保して録音ステータスの位置を固定 */
+#kbNow { min-width: 3em; font: 14px var(--mono); color: var(--warn); }   /* 押している音の表示。幅を確保して行の揺れを防ぐ */
+.rec-msg { min-height: 1.4em; margin: -2px 0 4px; }   /* 録音のメッセージは録音ボタンの行の下。空でも高さを取って鍵盤が上下しないように */
 .kb-out { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .kb-out input { flex: 1; padding: 5px 8px; background: var(--field); color: var(--warn); border: 1px solid var(--line); border-radius: 4px; font: 13px var(--mono); }
 
