@@ -40,6 +40,15 @@ module.exports = {
   'desk.js のウインドウ一覧と index.html の .win が一致する'() {
     eq(Object.keys(htmlWindows()).sort(), [...D.DESK_WINS].sort());
   },
+  'チャンネルの切り替えはエディタのウインドウの中にある（専用のウインドウは無い）'() {
+    let inWin = null, where = null;
+    htmlTokens(read('index.html')).forEach(t => {
+      if (t.type === 'start' && t.name === 'section' && (' ' + (t.attrs.class || '') + ' ').includes(' win ')) inWin = t.attrs.id;
+      if (t.type === 'start' && t.attrs.id === 'chToggles') where = inWin;
+    });
+    eq(where, 'winEditor');
+    ok(!D.DESK_WINS.includes('winCh'), 'チャンネルのウインドウは無い');
+  },
   'どのウインドウにもタイトルバー・タイトル・中身がある'() {
     const bad = Object.values(htmlWindows())
       .filter(w => !['win-bar', 'win-title', 'win-body'].every(c => w.classes.has(c)))
@@ -53,10 +62,10 @@ module.exports = {
     eq(Object.keys(L).sort(), [...D.DESK_WINS].sort());
     D.DESK_WINS.forEach(id => ['x', 'y', 'w', 'h', 'z'].forEach(k => ok(Number.isFinite(L[id][k]), `${id}.${k}`)));
   },
-  '初期配置: エディタとリズムパッドとチャンネルとガチャを開き、伴奏付けと追い足しは最小化、残りは閉じる'() {
+  '初期配置: エディタとリズムパッドとガチャを開き、伴奏付けと追い足しは最小化、残りは閉じる'() {
     const L = D.deskDefaultLayout(W, H);
     const pick = (f) => D.DESK_WINS.filter(id => f(L[id]));
-    eq(pick(s => !s.closed && !s.min), ['winEditor', 'winCh', 'winGen', 'winDrum']);
+    eq(pick(s => !s.closed && !s.min), ['winEditor', 'winGen', 'winDrum']);
     eq(pick(s => s.min), ['winHarm', 'winExt']);
     eq(pick(s => s.closed), ['winKb', 'winAudio', 'winRef']);
   },

@@ -137,7 +137,9 @@ code { font-family: var(--mono); color: var(--warn); }
 #barReport:empty { display: none; }
 #barReport .ng { color: var(--warn); }
 
-/* ── チャンネル（ランプ付きのミュートボタン風） ── */
+/* ── チャンネル（エディタの入力欄の上の帯。ランプ付きのミュートボタン風） ── */
+.ch-strip { flex: none; display: flex; align-items: center; gap: 8px; }
+.ch-label { flex: none; font-size: 11px; color: var(--faint); }
 .ch-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .ch-list label {
   gap: 6px; padding: 3px 9px 3px 7px; cursor: pointer;

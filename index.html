@@ -50,6 +50,10 @@
 "Optimize" shortens redundant writing in the selection, or in the whole text if nothing is selected: it removes lengths that equal the current l and turns absolute octaves into &gt; &lt;. If a part with no l has quarter notes, it adds l4 at the head of the track and drops the numbers (c4 d4 e4 f4 → l4 c d e f). The first o is kept, so the result never relies on the implicit default. It checks that the sound does not change before applying.
 "Copy for mml.js" removes comments and copies one line per track (for taking your song to mml.js in another project).</p>
     </div>
+    <div class="ch-strip" title="チェックしたチャンネルだけ鳴ります（再生中の切替は即ミュート/復帰）。伴奏付け・追い足しの対象はチェックに関係なく先頭トラックです" data-title-en="Only checked channels play (switching during playback mutes or unmutes at once). Accompaniment and melody extension always use the first track, whatever the checkboxes say">
+      <span class="ch-label"><span class="ja">チャンネル</span><span class="en">Channels</span></span>
+      <div id="chToggles" class="ch-list"></div>
+    </div>
     <textarea id="mml" spellcheck="false"></textarea>
     <div class="controls toolbar">
       <button id="optMml" title="選択範囲（未選択なら全体）の冗長な記述を縮めます。l と同じ音長の明示指定を削除し、絶対オクターブ指定を &gt; &lt; に変換します。l 指定の無い区間に4分音符があれば頭に l4 を足して省略します" data-title-en="Shortens redundant writing in the selection (or the whole text). Removes lengths that equal the current l and turns absolute octaves into &gt; &lt;. If a part with no l has quarter notes, adds l4 at the head and drops the numbers"><span class="ja">記述を最適化</span><span class="en">Optimize</span></button>
@@ -59,17 +63,6 @@
       <button id="checkBars" title="各トラックの尺が小節の整数倍か、全トラックで揃っているかを調べます。崩れている場合は小節線から外れ始めた行を示します" data-title-en="Checks that each track is a whole number of bars and that all tracks are the same length. If not, shows the line where a track first drifts off the bar lines"><span class="ja">小節チェック</span><span class="en">Check bars</span></button>
     </div>
     <pre id="barReport"></pre>
-  </div>
-</section>
-
-<section class="win" id="winCh">
-  <div class="win-bar"><span class="win-title"><span class="ja">チャンネル</span><span class="en">Channels</span></span></div>
-  <div class="win-body">
-    <div class="win-help">
-      <p class="hint ja">チェックしたチャンネルだけ鳴ります（再生中の切替は即ミュート/復帰）。伴奏付け・追い足しの対象はチェックに関係なく先頭トラックです。</p>
-      <p class="hint en">Only checked channels play (switching during playback mutes or unmutes at once). Accompaniment and melody extension always use the first track, whatever the checkboxes say.</p>
-    </div>
-    <div id="chToggles" class="ch-list"></div>
   </div>
 </section>
 

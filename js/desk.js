@@ -13,7 +13,7 @@
 //  test/desk.test.js で確かめる。
 // ─────────────────────────────────────────
 const DESK_KEY = 'mmlforge8-desk';
-const DESK_WINS = ['winEditor', 'winCh', 'winGen', 'winHarm', 'winExt', 'winDrum', 'winKb', 'winAudio', 'winRef'];
+const DESK_WINS = ['winEditor', 'winGen', 'winHarm', 'winExt', 'winDrum', 'winKb', 'winAudio', 'winRef'];
 const DESK_GAP = 10;      // ウインドウ同士・ワークスペースの端との間隔（初期配置と吸着で共通）
 const DESK_SNAP = 10;     // この距離（px）まで近づいたら吸着する
 const DESK_BAR = 30;      // 最小化したウインドウの高さ（タイトルバー。CSS の .win-bar と揃える）
@@ -24,7 +24,7 @@ const DESK_NARROW = 800;  // これ以下の画面幅ではウインドウをや
 
 // 初期配置。ワークスペースの幅 W と高さ H から、各ウインドウの位置・大きさ・状態を決める。
 //   左の列: エディタ（上）とリズムパッド（下）
-//   右の列: チャンネル・ガチャを開き、伴奏付け・追い足しは最小化して並べる
+//   右の列: ガチャを開き、伴奏付け・追い足しは最小化して並べる（チャンネルの切り替えはエディタの中）
 //   鍵盤・音声→MML・リファレンスは閉じておく（「ウインドウ」メニューから開く）
 // 戻り値: { [id]: { x, y, w, h, z, min, closed } }
 function deskDefaultLayout(W, H) {
@@ -34,13 +34,12 @@ function deskDefaultLayout(W, H) {
   const rx = g + L + g;
   const edH = Math.max(240, Math.round((H - 3 * g) * 0.58));
   const drY = g + edH + g;
-  const chH = 96, genH = 250;
-  const genY = g + chH + g;
+  const genH = 280;
+  const genY = g;
   const harmY = genY + genH + g;
   const layout = {
     winEditor: { x: g, y: g, w: L, h: edH },
     winDrum:   { x: g, y: drY, w: L, h: Math.max(200, H - drY - g) },
-    winCh:     { x: rx, y: g, w: R, h: chH },
     winGen:    { x: rx, y: genY, w: R, h: genH },
     winHarm:   { x: rx, y: harmY, w: R, h: 200, min: true },
     winExt:    { x: rx, y: harmY + DESK_BAR + g, w: R, h: 230, min: true },
