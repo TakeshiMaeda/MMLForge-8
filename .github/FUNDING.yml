@@ -1,0 +1,5 @@
+# リポジトリのページに GitHub 純正の「Sponsor」ボタンを出すための設定。
+# アプリ本体（index.html / js / css）には支援リンクを入れない方針。
+github: TakeshiMaeda
+ko_fi: spsoft
+custom: ["https://ofuse.me/e73cbb5c/letter"]
