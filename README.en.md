@@ -2,6 +2,9 @@
 
 [日本語](README.md) | **English**
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-3DA639)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/TakeshiMaeda/MMLForge-8?logo=github&logoColor=white&color=555555)](https://github.com/TakeshiMaeda/MMLForge-8/stargazers)
+
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-Sponsor-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/TakeshiMaeda)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/spsoft)
 [![OFUSE](https://img.shields.io/badge/OFUSE-Support-FF6699)](https://ofuse.me/e73cbb5c/letter)
