@@ -17,6 +17,11 @@
   CSS が <html lang> を見て片方を隠す。title / placeholder / <option> の中身は span が使えないので、
   日本語を書いたうえで data-title-en / data-placeholder-en / data-en に英語を並べる（js/i18n.js が差し替える）。
   id を持つ要素は複製しないこと（対にするのは中の文章だけ）。test/html.test.js が見張る
+
+  本文中にある #include 付きのコメント行は、自サイトへ配置するときのビルド
+  （sitedata/html-source/build.pl）が includes/ の中身に置き換える差し込み口。
+  リポジトリではただのコメントなので何も起きない（コメントは入れ子にできないので、
+  ここに閉じ記号を書かないこと）。支援リンクや広告はそちら側に置き、このリポジトリには入れない
 -->
 <header class="transport">
   <div class="brand">MMLForge-8 <span class="brand-sub">MML chiptune workbench</span></div>
@@ -34,6 +39,7 @@
     </div>
     <button id="deskArrange" title="開いているウインドウを、大きさはそのままで重ならないように並べ直します" data-title-en="Rearrange the open windows so they do not overlap, keeping their sizes"><span class="ja">整列</span><span class="en">Arrange</span></button>
     <button id="deskReset" title="すべてのウインドウの位置・大きさ・開閉を初期状態に戻します" data-title-en="Put every window back to its default position, size and open or closed state"><span class="ja">初期化</span><span class="en">Reset</span></button>
+    <!--#include "mmlforge8-support.html" -->
     <button id="langToggle" class="lang-toggle" title="Language"><span class="ja">English</span><span class="en" lang="ja">日本語</span></button>
   </div>
 </header>
