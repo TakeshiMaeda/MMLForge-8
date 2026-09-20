@@ -2,6 +2,10 @@
 
 [日本語](README.md) | **English**
 
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-Sponsor-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/TakeshiMaeda)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/spsoft)
+[![OFUSE](https://img.shields.io/badge/OFUSE-Support-FF6699)](https://ofuse.me/e73cbb5c/letter)
+
 Write music as text (MML) and hear it right away. A retro-style BGM workbench and playback engine that runs entirely in the browser.
 
 MML (Music Macro Language) is a traditional way of writing music as text, like `t120 l8 cdefgab`.
