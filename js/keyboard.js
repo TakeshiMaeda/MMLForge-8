@@ -173,7 +173,12 @@ function noteOff(semi) {
 // マウス/タッチ
 kb.addEventListener('pointerdown', (e) => {
   const semi = e.target.closest('[data-semi]')?.dataset.semi;
-  if (semi !== undefined) { e.preventDefault(); noteOn(+semi); }
+  if (semi === undefined) return;
+  e.preventDefault();
+  // 音色や BPM の入力欄にフォーカスが残っていると PCキーが効かないので、鍵盤を押したら外す
+  const focused = document.activeElement;
+  if (focused && /^(INPUT|SELECT|TEXTAREA)$/.test(focused.tagName)) focused.blur();
+  noteOn(+semi);
 });
 window.addEventListener('pointerup', () => {
   Object.keys(voices).forEach(s => { if (!heldPcKeys.has(+s)) noteOff(+s); });
