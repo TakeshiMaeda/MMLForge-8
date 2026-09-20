@@ -74,7 +74,7 @@ function loadDesk() {
   const { document, localStorage, navigator, location } = dom;
   void document; void localStorage; void navigator; void location;
   return eval([read('js/i18n.js'), read('js/desk.js')].join(';' + String.fromCharCode(10))   // eslint-disable-line no-eval
-    + ';({ DESK_WINS, DESK_GAP, DESK_BAR, DESK_KEEP, deskDefaultLayout, deskClamp, deskSnap, deskArrange, deskParse, deskIsOpen })');
+    + ';({ DESK_WINS, DESK_GAP, DESK_BAR, DESK_KEEP, deskDefaultLayout, deskClamp, deskSnap, deskArrange, deskParse, deskIsOpen, deskIsFront })');
 }
 
 // i18n.js だけを評価する（言語の決め方と切り替えのテスト用）。

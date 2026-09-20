@@ -189,12 +189,18 @@ module.exports = {
     eq(D.deskParse(json), { winEditor: { x: 1, y: 2, w: 300, h: 200, z: 5, min: true, closed: false } });
   },
 
-  // ── 開いているか（ミニ鍵盤の PC キー入力に使う） ──
+  // ── 開いているか・手前にあるか（ミニ鍵盤の PC キー入力に使う） ──
   '閉じている・最小化しているウインドウは開いていない扱い'() {
     const el = (...cls) => ({ classList: { contains: (c) => cls.includes(c) } });
     ok(D.deskIsOpen(el()), '開いている');
     ok(!D.deskIsOpen(el('closed')), '閉じている');
     ok(!D.deskIsOpen(el('min')), '最小化');
     ok(!D.deskIsOpen(null), '無い');
+  },
+  '手前にあるウインドウだけが front'() {
+    const el = (...cls) => ({ classList: { contains: (c) => cls.includes(c) } });
+    ok(D.deskIsFront(el('front')), '一番手前');
+    ok(!D.deskIsFront(el()), '後ろにある');
+    ok(!D.deskIsFront(null), '無い');
   },
 };

@@ -156,10 +156,15 @@ function deskParse(json) {
   return out;
 }
 
-// ウインドウが開いていて中身が見えているか（閉じていない・最小化していない）。
-// ミニ鍵盤の PC キー入力は、鍵盤のウインドウが見えているときだけ受け付ける
+// ウインドウが開いていて中身が見えているか（閉じていない・最小化していない）
 function deskIsOpen(el) {
   return !!el && !!el.classList && !el.classList.contains('closed') && !el.classList.contains('min');
+}
+
+// 一番手前のウインドウか（クリックで手前に来る。markFront が front を付ける）。
+// ミニ鍵盤の PC キー入力は、鍵盤のウインドウが見えていて手前にあるときだけ受け付ける
+function deskIsFront(el) {
+  return !!el && !!el.classList && el.classList.contains('front');
 }
 
 // ── 画面への組み込み ──────────────────────

@@ -179,11 +179,12 @@ window.addEventListener('pointerup', () => {
   Object.keys(voices).forEach(s => { if (!heldPcKeys.has(+s)) noteOff(+s); });
 });
 
-// PCキー（テキスト入力中と、鍵盤のウインドウを閉じている・最小化している間は無効）
+// PCキー（テキスト入力中と、鍵盤のウインドウが閉じている・最小化している・後ろにある間は無効）
 const heldPcKeys = new Set();
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
-  if (!deskIsOpen(document.getElementById('winKb'))) return;   // 鍵盤のウインドウが見えているときだけ（js/desk.js）
+  const kbWin = document.getElementById('winKb');   // 鍵盤のウインドウが見えていて手前のときだけ（js/desk.js）
+  if (!deskIsOpen(kbWin) || !deskIsFront(kbWin)) return;
   const tag = document.activeElement?.tagName;
   if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
   const semi = PC_KEYS[e.key.toLowerCase()];
