@@ -18,10 +18,8 @@
   日本語を書いたうえで data-title-en / data-placeholder-en / data-en に英語を並べる（js/i18n.js が差し替える）。
   id を持つ要素は複製しないこと（対にするのは中の文章だけ）。test/html.test.js が見張る
 
-  本文中にある #include 付きのコメント行は、自サイトへ配置するときのビルド
-  （sitedata/html-source/build.pl）が includes/ の中身に置き換える差し込み口。
-  リポジトリではただのコメントなので何も起きない（コメントは入れ子にできないので、
-  ここに閉じ記号を書かないこと）。支援リンクや広告はそちら側に置き、このリポジトリには入れない
+  #include 付きのコメント行は、配置先のビルドが差し替えるための印。このリポジトリではただのコメントで何も起きない
+  （HTML のコメントは入れ子にできないので、この説明の中に閉じ記号を書かないこと）
 -->
 <header class="transport">
   <div class="brand">MMLForge-8 <span class="brand-sub">MML chiptune workbench</span></div>
