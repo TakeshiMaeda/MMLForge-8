@@ -16,6 +16,13 @@ vanilla JavaScript (Web Audio API) with no build step and no dependencies. It us
 
 Just open `index.html` in a browser. No server, no install.
 
+- **Workspace** — The screen is laid out like a DAW: a transport bar with play, stop, loop and volume at the top, a hint bar
+  at the bottom, and each feature in its own window. Drag a title bar to move a window (it snaps to the screen edges and to
+  other windows), drag the bottom-right corner to resize, `_` or a double-click on the title bar to minimize, and `×` to close
+  (reopen it from "Windows" at the top). `?` opens that window's help.
+  The layout is saved. "Arrange" lines up the open windows without overlap, keeping their sizes, and "Reset" puts every window
+  back to its default position, size and open or closed state. The hint bar shows what the control under the mouse does.
+  On a narrow screen the windows stack vertically
 - **Player** — A line that starts at the left edge is one track (tracks play together for chords and accompaniment).
   A line that starts with a space continues the track above, so a track can span as many lines as you like. Loop playback. Your text is saved automatically.
   Comments are `;` (to the end of the line, also mid-line) and `/* ... */` (can span lines).
@@ -178,7 +185,7 @@ MMLPlayer.play([`
 | Comments `;` `/* ... */` | **×** | ○ |
 | Left edge = new track / leading space = continuation | **×** (pass an array) | ○ |
 
-To take a song written in the editor elsewhere, use **"Copy for mml.js"** next to the play button.
+To take a song written in the editor elsewhere, use **"Copy for mml.js"** in the Editor window.
 It copies the song with comments removed and continuation lines joined, one line per track, so each line can go straight into
 the array for `MMLPlayer.play()`. If you also want the editor's notation, copy `stripComments()` / `parseTrackBlocks()` from
 `js/core.js` as well (pure functions with no dependencies).
@@ -259,6 +266,7 @@ They check only **things that can be counted**.
 - **Error codes and message tables in sync.** Codes are collected from the `mml.js` source and checked against the messages in
   `js/mml-messages.js` (adding to only one side fails)
 - The editor's text handling (comment removal, track splitting, the bar check and its report)
+- The workspace window math (default layout, keeping windows on screen, snapping, arranging, reading the saved layout)
 - **Display language.** No Japanese is visible in the English view (HTML and JS), Japanese and English come in pairs, and
   changing the language does not change the generated songs
 - **The two READMEs in sync.** The notation table and the error code table match between Japanese and English, and the

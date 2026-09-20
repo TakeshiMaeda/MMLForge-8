@@ -67,6 +67,16 @@ function loadComposer(language = 'ja-JP') {
   return eval([read('js/i18n.js'), read('js/mml-composer.js')].join(';' + String.fromCharCode(10)) + ';MMLComposer');   // eslint-disable-line no-eval
 }
 
+// desk.js（ワークスペースのウインドウ）を評価して、DOM に触れない位置の計算を取り出す。
+// 最小DOMにはウインドウが無いので、画面への組み込み（deskInit）は何もせずに終わる
+function loadDesk() {
+  const dom = makeDom('ja-JP');
+  const { document, localStorage, navigator, location } = dom;
+  void document; void localStorage; void navigator; void location;
+  return eval([read('js/i18n.js'), read('js/desk.js')].join(';' + String.fromCharCode(10))   // eslint-disable-line no-eval
+    + ';({ DESK_WINS, DESK_GAP, DESK_BAR, DESK_KEEP, deskDefaultLayout, deskClamp, deskSnap, deskArrange, deskParse, deskIsOpen })');
+}
+
 // i18n.js だけを評価する（言語の決め方と切り替えのテスト用）。
 //   language … ブラウザの言語。saved … 保存済みの言語。storageBroken … localStorage が例外を投げる環境
 function loadI18n({ language, saved, storageBroken } = {}) {
@@ -120,4 +130,4 @@ const throwsWith = (fn, want, msg) => {
   if (!e.message.includes(want)) fail(`${msg || ''}: 文言が違います\n      期待に含む: ${want}\n      実際      : ${e.message}`);
 };
 
-module.exports = { ROOT, read, loadPlayer, loadCore, loadComposer, loadI18n, ok, eq, near, throwsCode, throwsWith, Failed };
+module.exports = { ROOT, read, loadPlayer, loadCore, loadComposer, loadDesk, loadI18n, ok, eq, near, throwsCode, throwsWith, Failed };

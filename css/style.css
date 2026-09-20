@@ -1,58 +1,214 @@
-  body { background: #0e0e18; color: #ddd; font-family: Consolas, "MS Gothic", monospace; max-width: 900px; margin: 20px auto; padding: 0 16px; }
-  h1 { font-size: 18px; color: #88aaff; }
-  h2 { font-size: 14px; color: #88aaff; margin: 18px 0 6px; }
-  textarea { width: 100%; height: 240px; background: #111a2a; color: #eee; border: 1px solid #334455; border-radius: 6px; padding: 10px; font-family: inherit; font-size: 14px; line-height: 1.6; box-sizing: border-box; }
-  .controls { display: flex; align-items: center; gap: 14px; margin: 12px 0; flex-wrap: wrap; }
-  button { background: #1a3a5a; color: #cce; border: 1px solid #5577aa; border-radius: 6px; padding: 8px 22px; font-size: 15px; font-family: inherit; cursor: pointer; }
-  button:hover { background: #2a4a6a; color: #fff; }
-  button.rec-on { background: #5a1a1a; border-color: #aa5555; color: #ffaaaa; }
-  label { font-size: 13px; }
-  input[type="number"], select { background: #111a2a; color: #eee; border: 1px solid #334455; border-radius: 4px; padding: 3px 6px; font-family: inherit; }
-  #status { font-size: 13px; color: #88cc88; }
-  #error { color: #ff8888; font-size: 13px; white-space: pre-wrap; min-height: 1.2em; }
-  #barReport { margin: 4px 0; font-size: 12px; line-height: 1.5; white-space: pre-wrap; color: #99a; }
-  #barReport:empty { display: none; }
-  #barReport .ng { color: #ffcc66; }
-  #recStatus { font-size: 13px; color: #ffaa88; }
-  details { margin-top: 18px; font-size: 13px; color: #aab; }
-  summary { cursor: pointer; color: #88aaff; font-size: 14px; }
-  details.sec { margin-top: 14px; }
-  table { border-collapse: collapse; margin-top: 8px; }
-  td { border: 1px solid #334455; padding: 3px 10px; }
-  td:first-child { color: #ffdd88; white-space: nowrap; }
-  .hint { color: #667; font-size: 12px; }
-  /* ── 表示言語の出し分け（<html lang> は js/i18n.js が <head> で決める） ── */
-  html[lang="ja"] .en, html[lang="en"] .ja { display: none !important; }
-  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .lang-toggle { padding: 4px 12px; font-size: 13px; }
-  .subbox { border: 1px dashed #334455; border-radius: 6px; padding: 2px 10px 6px; margin: 10px 0; }
-  /* ── リズムパッド ── */
-  .dgrid { overflow-x: auto; padding: 4px 0; }
-  .drow { display: flex; align-items: center; gap: 6px; margin: 3px 0; width: max-content; }
-  .dhead { position: sticky; left: 0; z-index: 1; background: #0e0e18; display: flex; gap: 4px; align-items: center; padding-right: 6px; }
-  .dhead select, .dhead input { font-size: 12px; }
-  .dhead button { padding: 2px 8px; font-size: 12px; }
-  .dcell { width: 16px; height: 24px; border: 1px solid #334455; border-radius: 3px; background: #111a2a; cursor: pointer; flex-shrink: 0; box-sizing: border-box; }
-  .dcell.beat { background: #16233a; }
-  .dcell.on { background: #4488ff; border-color: #88aaff; }
-  .dcell:hover { border-color: #5577aa; }
-  #drOut { flex: 1; width: auto; height: 52px; background: #111a2a; color: #ffdd88; border: 1px solid #334455; border-radius: 4px;
-           padding: 6px 8px; font-family: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
-  .subttl { color: #667; font-size: 12px; margin-top: 6px; }
-  .grp { border-top: 1px solid #334455; color: #88aaff; font-size: 13px; margin-top: 14px; padding-top: 8px; }
-  /* ── ミニ鍵盤 ── */
-  #kb { position: relative; height: 112px; margin: 8px 0 10px; user-select: none; touch-action: none; }
-  .wkey { position: absolute; top: 0; width: 34px; height: 112px; background: #e8e8e8; border: 1px solid #333;
-          border-radius: 0 0 4px 4px; box-sizing: border-box; z-index: 1; cursor: pointer; }
-  .wkey.active { background: #aaddff; }
-  .wkey .kc { position: absolute; bottom: 3px; width: 100%; text-align: center; color: #556; font-size: 10px; }
-  .wkey .nn { position: absolute; bottom: 18px; width: 100%; text-align: center; color: #99a; font-size: 9px; }
-  .bkey { position: absolute; top: 0; width: 22px; height: 66px; background: #1a1a22; border: 1px solid #000;
-          border-radius: 0 0 3px 3px; box-sizing: border-box; z-index: 2; cursor: pointer; }
-  .bkey.active { background: #4488ff; }
-  .bkey .kc { position: absolute; bottom: 3px; width: 100%; text-align: center; color: #889; font-size: 9px; }
-  #kbNow { min-width: 3em; font-size: 14px; color: #ffdd88; }   /* 幅を確保して録音ステータスの位置を固定 */
-  .kb-out { display: flex; gap: 8px; align-items: center; }
-  .kb-out input { flex: 1; background: #111a2a; color: #ffdd88; border: 1px solid #334455; border-radius: 4px;
-                  padding: 6px 8px; font-family: inherit; font-size: 13px; }
-  .kb-out button { padding: 6px 14px; font-size: 13px; }
+/* ─────────────────────────────────────────
+   MMLForge-8 — DAW 風の画面
+   上部のトランスポート / 中央のワークスペース（ウインドウを浮かべる）/ 下部のヒントバー。
+   色はここの変数だけで決める（差し色は --accent の1色）
+   ───────────────────────────────────────── */
+:root {
+  --bg:        #141518;   /* ワークスペース */
+  --panel:     #1e2024;   /* ウインドウの中身 */
+  --panel2:    #25282d;   /* 中身の中の囲み */
+  --bar:       #2a2d33;   /* タイトルバー・トランスポート・ヒントバー */
+  --bar-front: #33373e;   /* 一番手前のウインドウのタイトルバー */
+  --line:      #3a3e45;
+  --field:     #101114;   /* 入力欄 */
+  --text:      #d8dadf;
+  --dim:       #8b919b;
+  --faint:     #5f646d;
+  --accent:    #f5a623;
+  --accent-hi: #ffbe4d;
+  --ok:        #7ed67e;
+  --ng:        #ff6b6b;
+  --warn:      #ffcc66;
+  --lcd-bg:    #0b120b;
+  --lcd-fg:    #9df29d;
+  --ui:   system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
+  --mono: Consolas, "Cascadia Mono", "MS Gothic", monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg); color: var(--text); font: 13px/1.45 var(--ui);
+}
+
+/* ── 表示言語の出し分け（<html lang> は js/i18n.js が <head> で決める） ── */
+html[lang="ja"] .en, html[lang="en"] .ja { display: none !important; }
+
+/* ── 部品 ── */
+button {
+  font: inherit; font-size: 12px; color: var(--text); cursor: pointer;
+  background: #33363c; border: 1px solid #45494f; border-radius: 4px; padding: 5px 12px;
+}
+button:hover { background: #3d4148; border-color: #555a61; }
+button:active { background: #2a2d32; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #151515; font-weight: 600; }
+button.primary:hover { background: var(--accent-hi); }
+button.rec-on { background: #6a1f1f; border-color: #b24a4a; color: #ffc9c9; }
+input[type="number"], input:not([type]), select {
+  font: inherit; font-size: 12px; color: var(--text);
+  background: var(--field); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px;
+}
+input[type="range"], input[type="checkbox"] { accent-color: var(--accent); }
+label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--dim); }
+code { font-family: var(--mono); color: var(--warn); }
+.hint { color: var(--faint); font-size: 12px; }
+.controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 6px 0; }
+.sep { width: 1px; height: 18px; background: var(--line); }
+
+/* ── トランスポート ── */
+.transport {
+  flex: none; position: relative; z-index: 10;
+  display: flex; align-items: center; gap: 14px; padding: 6px 12px;
+  background: var(--bar); border-bottom: 1px solid #000;
+}
+.brand { font-weight: 700; letter-spacing: .04em; color: var(--accent); white-space: nowrap; }
+.brand-sub { margin-left: 6px; font-size: 11px; font-weight: 400; letter-spacing: 0; color: var(--dim); }
+.tp-group { display: flex; align-items: center; gap: 8px; }
+.tp-right { margin-left: auto; }
+.tp-btn { width: 34px; height: 30px; padding: 0; font-size: 14px; }
+.tp-play { background: var(--accent); border-color: var(--accent); color: #151515; }
+.tp-play:hover { background: var(--accent-hi); }
+.lcd {
+  flex: 1; min-width: 180px; max-width: 480px; height: 30px; display: flex; align-items: center; padding: 0 10px;
+  background: var(--lcd-bg); border: 1px solid #000; border-radius: 4px; box-shadow: inset 0 1px 4px rgba(0, 0, 0, .7);
+  font: 12px var(--mono); color: var(--lcd-fg); white-space: nowrap; overflow: hidden;
+}
+.menu-wrap { position: relative; }
+.menu {
+  position: absolute; right: 0; top: calc(100% + 4px); min-width: 230px; padding: 4px;
+  background: var(--bar-front); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+}
+.menu-item {
+  display: block; width: 100%; position: relative; padding: 6px 10px 6px 28px; text-align: left;
+  background: transparent; border: none; color: var(--dim);
+}
+.menu-item:hover { background: var(--line); }
+.menu-item.on { color: var(--text); }
+.menu-item.on::before { content: '✓'; position: absolute; left: 10px; color: var(--accent); }
+.lang-toggle { padding: 5px 10px; }
+
+/* ── ワークスペースとウインドウ ── */
+.desk {
+  flex: 1; position: relative; overflow: auto; isolation: isolate;
+  background: radial-gradient(circle, #1f2126 1px, transparent 1px) 0 0 / 20px 20px, var(--bg);
+}
+.win {
+  position: absolute; display: flex; flex-direction: column; min-width: 220px; min-height: 60px;
+  background: var(--panel); border: 1px solid #000; border-radius: 6px; overflow: hidden; resize: both;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .45), inset 0 0 0 1px var(--line);
+}
+.win.closed { display: none; }
+.win.min { height: auto !important; min-height: 0; resize: none; }
+.win.min .win-body { display: none; }
+.win.dragging { opacity: .92; }
+.win-bar {   /* 高さは js/desk.js の DESK_BAR と揃える（28px + 上下の枠 1px） */
+  flex: none; height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px;
+  background: var(--bar); border-bottom: 1px solid #000; cursor: move; user-select: none; touch-action: none;
+}
+.win.front .win-bar { background: var(--bar-front); box-shadow: inset 0 2px 0 var(--accent); }
+.win-title { flex: 1; min-width: 0; font-size: 12px; font-weight: 600; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.win.front .win-title { color: var(--text); }
+.win-btns { display: flex; gap: 2px; }
+.win-btn { width: 22px; height: 20px; padding: 0; font-size: 12px; line-height: 1; background: transparent; border-color: transparent; color: var(--dim); }
+.win-btn:hover { background: var(--line); color: var(--text); }
+.win-body { flex: 1; min-height: 0; overflow: auto; padding: 8px 10px; }
+.win-help { display: none; margin-bottom: 8px; padding: 6px 10px; background: var(--panel2); border-left: 2px solid var(--accent); border-radius: 3px; }
+.win.show-help .win-help { display: block; }
+.win-help .hint { margin: 0; color: var(--dim); white-space: pre-line; }
+.win-status { font-size: 12px; }
+.subbox { margin-top: 8px; padding: 4px 10px 6px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; }
+.subttl { margin: 2px 0; font-size: 11px; color: var(--faint); }
+
+/* ── エディタ ── */
+.win-editor { display: flex; flex-direction: column; gap: 6px; }
+#mml {
+  flex: 1; min-height: 120px; width: 100%; resize: none; padding: 8px 10px;
+  background: var(--field); color: #e8e8e8; border: 1px solid var(--line); border-radius: 4px;
+  font: 14px/1.6 var(--mono);
+}
+#mml:focus { outline: none; border-color: var(--accent); }
+.toolbar { margin: 0; }
+#barReport {
+  flex: none; max-height: 40%; overflow: auto; margin: 0; padding: 6px 8px;
+  background: var(--field); border: 1px solid var(--line); border-radius: 4px;
+  font: 12px/1.5 var(--mono); white-space: pre-wrap; color: var(--dim);
+}
+#barReport:empty { display: none; }
+#barReport .ng { color: var(--warn); }
+
+/* ── チャンネル（エディタの入力欄の上の帯。ランプ付きのミュートボタン風） ── */
+.ch-strip { flex: none; display: flex; align-items: center; gap: 8px; }
+.ch-label { flex: none; font-size: 11px; color: var(--faint); }
+.ch-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.ch-list label {
+  gap: 6px; padding: 3px 9px 3px 7px; cursor: pointer;
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; color: var(--text); font-family: var(--mono);
+}
+.ch-list input { appearance: none; width: 10px; height: 10px; margin: 0; border-radius: 50%; background: #3a2c12; border: 1px solid #000; cursor: pointer; }
+.ch-list input:checked { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+/* ── リズムパッド ── */
+#drStatus { color: var(--ok); }
+.dgrid { overflow-x: auto; padding: 4px 0; }
+.drow { display: flex; align-items: center; gap: 6px; margin: 3px 0; width: max-content; }
+.dhead { position: sticky; left: 0; z-index: 1; display: flex; gap: 4px; align-items: center; padding-right: 6px; background: var(--panel); }
+.dhead select, .dhead input { font-size: 11px; }
+.dhead button { padding: 2px 8px; font-size: 11px; }
+.dcell { width: 16px; height: 24px; flex-shrink: 0; cursor: pointer; background: #2a2d33; border: 1px solid #000; border-radius: 3px; }
+.dcell.beat { background: #353940; }
+.dcell.on { background: var(--accent); border-color: var(--accent-hi); box-shadow: 0 0 6px rgba(245, 166, 35, .5); }
+.dcell:hover { border-color: var(--dim); }
+#drOut {
+  flex: 1; width: auto; height: 52px; padding: 6px 8px; resize: vertical;
+  background: var(--field); color: var(--warn); border: 1px solid var(--line); border-radius: 4px; font: 12px/1.5 var(--mono);
+}
+
+/* ── ミニ鍵盤・音声→MML ── */
+#recStatus, #audStatus { color: #ffb38a; }
+#micNote { min-width: 5em; color: var(--ok); font-family: var(--mono); }
+#kb { position: relative; height: 112px; margin: 8px 0 10px; user-select: none; touch-action: none; }
+.wkey {
+  position: absolute; top: 0; z-index: 1; width: 34px; height: 112px; cursor: pointer;
+  background: #e8e8e8; border: 1px solid #222; border-radius: 0 0 4px 4px;
+}
+.wkey.active { background: #ffd699; }
+.wkey .kc { position: absolute; bottom: 3px; width: 100%; text-align: center; color: #556; font-size: 10px; }
+.wkey .nn { position: absolute; bottom: 18px; width: 100%; text-align: center; color: #99a; font-size: 9px; }
+.bkey {
+  position: absolute; top: 0; z-index: 2; width: 22px; height: 66px; cursor: pointer;
+  background: #1a1a1e; border: 1px solid #000; border-radius: 0 0 3px 3px;
+}
+.bkey.active { background: var(--accent); }
+.bkey .kc { position: absolute; bottom: 3px; width: 100%; text-align: center; color: #889; font-size: 9px; }
+#kbNow { min-width: 3em; font: 14px var(--mono); color: var(--warn); }   /* 押している音の表示。幅を確保して行の揺れを防ぐ */
+.rec-msg { min-height: 1.4em; margin: -2px 0 4px; }   /* 録音のメッセージは録音ボタンの行の下。空でも高さを取って鍵盤が上下しないように */
+.kb-out { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.kb-out input { flex: 1; padding: 5px 8px; background: var(--field); color: var(--warn); border: 1px solid var(--line); border-radius: 4px; font: 13px var(--mono); }
+
+/* ── 記法リファレンス ── */
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+td { padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td:first-child { color: var(--warn); white-space: nowrap; font-family: var(--mono); }
+
+/* ── ヒントバー（マウスを載せた部品の説明とエラー） ── */
+.hintbar {
+  flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 16px; min-height: 26px; padding: 4px 12px;
+  background: var(--bar); border-top: 1px solid #000; font-size: 12px;
+}
+.hint-text { flex: 1; min-width: 0; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#error { order: -1; flex-basis: 100%; color: var(--ng); white-space: pre-wrap; }
+#error:empty { display: none; }
+
+/* ── 狭い画面: ウインドウをやめて縦に並べる（js/desk.js の DESK_NARROW と揃える） ── */
+@media (max-width: 800px) {
+  html, body { height: auto; }
+  body { display: block; overflow: auto; }
+  .transport { flex-wrap: wrap; }
+  .lcd { order: 10; flex-basis: 100%; max-width: none; }
+  .desk { overflow: visible; padding: 8px; background: var(--bg); }
+  .win { position: static !important; width: auto !important; height: auto !important; min-height: 0; margin-bottom: 10px; resize: none; }
+  .win-bar { cursor: default; }
+  .win-editor #mml { flex: none; height: 240px; }
+  .hintbar { position: sticky; bottom: 0; }
+}
