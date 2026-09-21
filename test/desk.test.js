@@ -203,4 +203,9 @@ module.exports = {
     ok(!D.deskIsFront(el()), '後ろにある');
     ok(!D.deskIsFront(null), '無い');
   },
+
+  '縦に並べる表示の条件は CSS の @media と js/desk.js の DESK_NARROW で同じ'() {
+    ok(read('css/style.css').includes(`@media ${D.DESK_NARROW} {`),
+      `css/style.css に「@media ${D.DESK_NARROW} {」がありません`);
+  },
 };

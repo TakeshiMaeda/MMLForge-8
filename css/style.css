@@ -210,15 +210,26 @@ td:first-child { color: var(--warn); white-space: nowrap; font-family: var(--mon
 .credit-icon { width: 14px; height: 14px; }
 .credit-ver { color: var(--dim); white-space: nowrap; }
 
-/* ── 狭い画面: ウインドウをやめて縦に並べる（js/desk.js の DESK_NARROW と揃える） ── */
-@media (max-width: 800px) {
+/* ── 狭い・低い画面: ウインドウをやめて縦に並べる（条件は js/desk.js の DESK_NARROW と揃える） ── */
+@media (max-width: 800px), (max-height: 500px) {
   html, body { height: auto; }
-  body { display: block; overflow: auto; }
-  .transport { flex-wrap: wrap; }
+  /* 中身が短くてもヒントバーが画面の下端に来るように、ページの高さを画面いっぱい以上にする */
+  body { overflow: visible; min-height: 100vh; min-height: 100dvh; }
+  .desk { flex: 1 0 auto; }
+  /* トランスポートは段に分けて折り返す: ロゴ / 再生・音量 / 表示窓 / ウインドウ・初期化・言語・支援 */
+  .transport { flex-wrap: wrap; gap: 8px 14px; }
+  .transport button, .transport label { white-space: nowrap; }
+  .tp-group { flex-wrap: wrap; }
   .lcd { order: 10; flex-basis: 100%; max-width: none; }
+  .tp-right { order: 11; flex-basis: 100%; margin-left: 0; }
+  #deskArrange { display: none; }   /* 縦に並べる表示では位置を使わないので、整列は何もしない */
   .desk { overflow: visible; padding: 8px; background: var(--bg); }
   .win { position: static !important; width: auto !important; height: auto !important; min-height: 0; margin-bottom: 10px; resize: none; }
   .win-bar { cursor: default; }
   .win-editor #mml { flex: none; height: 240px; }
+  /* リズムパッド: 設定欄を左に貼り付けると画面が設定欄だけで埋まってマスが見えなくなるので、貼り付けをやめて
+     設定欄とマスをひと続きのまま、ウインドウの中身ごと横スクロールする（ミニ鍵盤と同じ） */
+  .dgrid { overflow: visible; }
+  .dhead { position: static; }
   .hintbar { position: sticky; bottom: 0; }
 }

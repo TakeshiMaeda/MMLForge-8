@@ -8,7 +8,7 @@
 //  「整列」は開いているウインドウを大きさはそのままで重ならないように並べ直し、
 //  「初期化」は位置・大きさ・開閉をすべて初期配置に戻す。
 //  ドラッグ中はワークスペースの端とほかのウインドウの端に吸着する（Alt を押している間は吸着しない）。
-//  画面が狭いとき（NARROW 以下）はウインドウをやめて縦に並べる（CSS 側。ドラッグもしない）。
+//  画面が狭いとき・低いとき（DESK_NARROW）はウインドウをやめて縦に並べる（CSS 側。ドラッグもしない）。
 //  下部のヒントバーには、マウスを載せた部品の title を出す。
 //
 //  位置の計算（初期配置・画面内に収める・吸着・保存データの読み込み）は DOM に触れない関数にしてあり、
@@ -20,7 +20,9 @@ const DESK_GAP = 10;      // ウインドウ同士・ワークスペースの端
 const DESK_SNAP = 10;     // この距離（px）まで近づいたら吸着する
 const DESK_BAR = 30;      // 最小化したウインドウの高さ（タイトルバー。CSS の .win-bar と揃える）
 const DESK_KEEP = 60;     // 画面外へ出しても、タイトルバーをこの幅だけは掴めるように残す
-const DESK_NARROW = 800;  // これ以下の画面幅ではウインドウをやめて縦に並べる
+// この条件に合う画面ではウインドウをやめて縦に並べる（幅が狭い、または横持ちのスマホのように高さが低い）。
+// CSS の @media と同じ文字列にしておくこと
+const DESK_NARROW = '(max-width: 800px), (max-height: 500px)';
 
 // ── 位置の計算（DOM に触れない） ──────────────────
 
@@ -178,7 +180,7 @@ function deskInit() {
   });
   if (!Object.keys(wins).length) return;   // テスト用の最小 DOM など、ウインドウが無いときは何もしない
 
-  const narrow = () => window.matchMedia(`(max-width: ${DESK_NARROW}px)`).matches;
+  const narrow = () => window.matchMedia(DESK_NARROW).matches;
   const size = () => ({ W: desk.clientWidth, H: desk.clientHeight });
   // 初期配置の基準の大きさ。狭い画面（縦に並べる表示）で決めると、あとで広い画面で開いたときに
   // 詰まった配置になるので、そのときは標準的な画面の大きさで決めておく
@@ -256,10 +258,26 @@ function deskInit() {
       menu.appendChild(item);
     });
   };
+  // メニューはボタンの右端に揃えて左へ開く。狭い画面でボタンが左寄りにあると画面の左外へ出るので、
+  // 開いたあとに測って、はみ出した分だけ内側へずらす
+  const placeMenu = () => {
+    menu.style.left = '';
+    menu.style.right = '';
+    const m = 8;
+    const vw = document.documentElement.clientWidth;
+    const r = menu.getBoundingClientRect();
+    const wrap = menu.parentElement.getBoundingClientRect();
+    if (r.left < m) {
+      menu.style.right = 'auto';
+      menu.style.left = (m - wrap.left) + 'px';
+    } else if (r.right > vw - m) {
+      menu.style.right = (wrap.right - (vw - m)) + 'px';
+    }
+  };
   menuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     menu.hidden = !menu.hidden;
-    if (!menu.hidden) renderMenu();
+    if (!menu.hidden) { renderMenu(); placeMenu(); }
   });
   document.addEventListener('pointerdown', (e) => {
     if (!menu.hidden && !menu.contains(e.target) && !menuBtn.contains(e.target)) menu.hidden = true;

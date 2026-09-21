@@ -26,7 +26,7 @@ const vol    = document.getElementById('vol');
 // ── 版の表記 ──
 // アプリの版はここ、エンジンの版は mml.js 自身が持つ（MMLPlayer.version）。
 // 1行で書くときは mml.js を括弧に入れる。2行で書けるところ（README）は上下に並べる
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 function versionText() {
   return `MMLForge-8 v${APP_VERSION} (mml.js v${MMLPlayer.version})`;
 }

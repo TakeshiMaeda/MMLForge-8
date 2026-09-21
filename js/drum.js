@@ -286,13 +286,26 @@ function renderDrumPad() {
       else if (i > 0 && i % 4 === 0) cell.style.marginLeft = '4px';
       else if (i > 0) cell.style.marginLeft = '2px';
       if (drum.grid[ti][i]) cell.classList.add('on');
-      cell.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
+      const toggle = () => {
         const on = !drum.grid[ti][i];
         drum.grid[ti][i] = on;
         cell.classList.toggle('on', on);
         if (on) drumHit(tr);
         drChanged();
+      };
+      // マウスは押した瞬間に切り替える。指はタップ（click）で切り替える:
+      // 押した瞬間にすると、マスの上から横スクロールしようとしただけで ON/OFF されてしまう
+      let touched = false;
+      cell.addEventListener('pointerdown', (e) => {
+        touched = e.pointerType === 'touch';
+        if (touched) return;
+        e.preventDefault();
+        toggle();
+      });
+      cell.addEventListener('click', () => {
+        if (!touched) return;
+        touched = false;
+        toggle();
       });
       cells.appendChild(cell);
     }

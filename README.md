@@ -11,7 +11,7 @@
 
 **公式サイト: [spsoft.server-on.net/tools/MMLForge-8](https://spsoft.server-on.net/tools/MMLForge-8/)**
 
-MMLForge-8 v1.0.0<br>
+MMLForge-8 v1.0.1<br>
 mml.js v1.0.0
 
 テキスト（MML）で書いて、その場で鳴らす。ブラウザだけで動くレトロ風BGM作成ツール＆再生エンジン。
