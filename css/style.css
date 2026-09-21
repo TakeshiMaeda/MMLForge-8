@@ -199,10 +199,15 @@ td:first-child { color: var(--warn); white-space: nowrap; font-family: var(--mon
 .hint-text { flex: 1; min-width: 0; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #error { order: -1; flex-basis: 100%; color: var(--ng); white-space: pre-wrap; }
 #error:empty { display: none; }
-/* 右端のクレジット（リポジトリとライセンスへの導線） */
-.credit { flex: none; display: flex; gap: 12px; }
-.credit a { color: var(--dim); text-decoration: none; }
-.credit a:hover { color: var(--accent); text-decoration: underline; }
+/* 右端のクレジット（リポジトリとライセンスへの導線）。ボタンと同じ質感のピルにして見つけやすくする */
+.credit { flex: none; display: flex; align-items: center; gap: 8px; }
+.credit a {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+  color: var(--text); text-decoration: none;
+  background: #33363c; border: 1px solid #45494f; border-radius: 4px;
+}
+.credit a:hover { background: var(--accent); border-color: var(--accent); color: #151515; }
+.credit-icon { width: 14px; height: 14px; }
 
 /* ── 狭い画面: ウインドウをやめて縦に並べる（js/desk.js の DESK_NARROW と揃える） ── */
 @media (max-width: 800px) {
