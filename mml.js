@@ -1,4 +1,5 @@
 // MMLForge-8 / MMLPlayer — MML(Music Macro Language) パーサ + Web Audio シーケンサ（外部依存なし）
+// mml.js v1.0.0
 // Copyright (c) 2026 Takeshi Maeda (SPSoft)
 // SPDX-License-Identifier: MIT
 // この1ファイルだけコピーして使う場合も、上記の著作権表示とMITライセンス全文を添えること。
@@ -47,6 +48,7 @@
 //   pos    … 1始まりの「原文」の文字位置。リピート [ ]n の後ろでも展開後の位置にはならない
 // 文言は利用側で code から作る（このリポジトリでは js/mml-messages.js が持つ）
 const MMLPlayer = (() => {
+  const VERSION = '1.0.0';   // 冒頭コメントの「mml.js v…」と揃えること
   let _ctx        = null;
   let _masterGain = null;
   let _sessionGain = null;   // 再生セッションごとの出力（stop で切断して即消音）
@@ -551,6 +553,7 @@ const MMLPlayer = (() => {
   }
 
   return {
+    version: VERSION,   // エンジンの版（'1.0.0' の形。v は付けない）
     MMLError,   // 利用側が instanceof で判別できるように公開する
     play,
     stop,

@@ -208,6 +208,7 @@ td:first-child { color: var(--warn); white-space: nowrap; font-family: var(--mon
 }
 .credit a:hover { background: var(--accent); border-color: var(--accent); color: #151515; }
 .credit-icon { width: 14px; height: 14px; }
+.credit-ver { color: var(--dim); white-space: nowrap; }
 
 /* ── 狭い画面: ウインドウをやめて縦に並べる（js/desk.js の DESK_NARROW と揃える） ── */
 @media (max-width: 800px) {

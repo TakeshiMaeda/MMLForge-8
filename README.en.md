@@ -11,6 +11,9 @@
 
 **Official site: [spsoft.server-on.net/tools/MMLForge-8](https://spsoft.server-on.net/tools/MMLForge-8/)**
 
+MMLForge-8 v1.0.0<br>
+mml.js v1.0.0
+
 Write music as text (MML) and hear it right away. A retro-style BGM workbench and playback engine that runs entirely in the browser.
 
 MML (Music Macro Language) is a traditional way of writing music as text, like `t120 l8 cdefgab`.

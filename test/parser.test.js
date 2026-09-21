@@ -7,7 +7,8 @@ const P = loadPlayer();
 // mml.js を書き換えずにテスト時だけ _parseTrack を露出させて確かめる
 const { read } = require('./helper');
 const raw = read('mml.js');
-const patched = raw.replace(/return \{\s*\r?\n(\s*)MMLError,/, (m, ind) => `return {\n${ind}_pt: _parseTrack,\n${ind}MMLError,`);
+// 公開オブジェクトの中の MMLError の行の前に足す（並び順には依存しない）
+const patched = raw.replace(/\n([ \t]*)MMLError,/, (m, ind) => `\n${ind}_pt: _parseTrack,\n${ind}MMLError,`);
 if (patched === raw) throw new Error('mml.js の return ブロックの形が変わりました（テストの読み込み方を直してください）');
 const Inner = eval(patched + ';MMLPlayer');   // eslint-disable-line no-eval
 const ev = (s) => Inner._pt(s, 0);

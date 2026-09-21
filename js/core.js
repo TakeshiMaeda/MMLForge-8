@@ -23,6 +23,15 @@ const error  = document.getElementById('error');
 const loopCk = document.getElementById('loop');
 const vol    = document.getElementById('vol');
 
+// ── 版の表記 ──
+// アプリの版はここ、エンジンの版は mml.js 自身が持つ（MMLPlayer.version）。
+// 1行で書くときは mml.js を括弧に入れる。2行で書けるところ（README）は上下に並べる
+const APP_VERSION = '1.0.0';
+function versionText() {
+  return `MMLForge-8 v${APP_VERSION} (mml.js v${MMLPlayer.version})`;
+}
+document.getElementById('version').textContent = versionText();
+
 // ── チャンネルON/OFF ──
 // chOn[i] = トラックiを再生するか。OFFでも再生には全トラックを渡し、トラック別ゲインでミュートする
 // （再生中の切替を即反映するため）。伴奏付け・追い足しの対象はミュート状態と無関係に先頭トラック

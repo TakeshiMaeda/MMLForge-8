@@ -54,7 +54,7 @@ function loadCore(MMLPlayer, opts = {}) {
   void navigator; void location;
   const src = [read('js/i18n.js'), read('js/mml-messages.js'), read('js/core.js')].join(';' + String.fromCharCode(10));
   const api = eval(src   // eslint-disable-line no-eval
-    + ';({ LANG, T, TEXT, stripComments, parseTrackBlocks, trackPos, locateError, mmlMessage, MML_MSG, barCheck, barReport, playStatusText, optimizeMML, ta })');
+    + ';({ LANG, T, TEXT, APP_VERSION, versionText, stripComments, parseTrackBlocks, trackPos, locateError, mmlMessage, MML_MSG, barCheck, barReport, playStatusText, optimizeMML, ta })');
   return { ...api, localStorage, document };
 }
 
