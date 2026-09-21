@@ -9,6 +9,8 @@
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/spsoft)
 [![OFUSE](https://img.shields.io/badge/OFUSE-Support-FF6699)](https://ofuse.me/e73cbb5c/letter)
 
+**公式サイト: [spsoft.server-on.net/tools/MMLForge-8](https://spsoft.server-on.net/tools/MMLForge-8/)**
+
 テキスト（MML）で書いて、その場で鳴らす。ブラウザだけで動くレトロ風BGM作成ツール＆再生エンジン。
 
 MML（Music Macro Language）は `t120 l8 cdefgab` のように音楽をテキストで記述する伝統的な記法です。
