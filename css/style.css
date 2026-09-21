@@ -76,7 +76,8 @@ code { font-family: var(--mono); color: var(--warn); }
 }
 .menu-wrap { position: relative; }
 .menu {
-  position: absolute; right: 0; top: calc(100% + 4px); min-width: 230px; padding: 4px;
+  /* z-index が無いと、後ろに書いた部品のうち重なりの層を作るもの（半透明の支援バッジなど）がメニューの上に描かれる */
+  position: absolute; z-index: 1; right: 0; top: calc(100% + 4px); min-width: 230px; padding: 4px;
   background: var(--bar-front); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
 }
 .menu-item {
