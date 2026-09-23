@@ -43,10 +43,10 @@ function doGenerate(seed) {
   genSeed.value = seed;
   const res = MMLComposer.generate({ ...genParams(), bars: +genBars.value, seed });
   genUndoBuf = ta.value;
-  applyText(res.comment + '\n' + res.tracks.join('\n\n'));
+  applyText(res.comment + '\n' + res.channels.join('\n\n'));
   error.textContent = '';
   try {
-    const info = playTracks(res.tracks);
+    const info = playChannels(res.channels);
     status.textContent = playStatusText(info);
   } catch (e) {
     status.textContent = '';
@@ -67,7 +67,7 @@ document.getElementById('genUndo').addEventListener('click', () => {
 // メロディ伴奏付け
 function doHarmonize(seed) {
   document.getElementById('harmSeed').value = seed;
-  const block = parseTrackBlocks(ta.value)[0];
+  const block = parseChannelBlocks(ta.value)[0];
   if (!block) {
     error.textContent = T('gen.noMelody');
     return;
@@ -85,12 +85,12 @@ function doHarmonize(seed) {
     genUndoBuf = ta.value;
     // メロディ部分はユーザーの改行・整形を保ったまま原文で残す
     const melodyText = ta.value.split('\n').slice(block.start, block.end + 1).join('\n');
-    applyText(res.comment + '\n' + melodyText + '\n\n' + res.tracks.join('\n\n'));
-    const info = playTracks([melody, ...res.tracks]);
+    applyText(res.comment + '\n' + melodyText + '\n\n' + res.channels.join('\n\n'));
+    const info = playChannels([melody, ...res.channels]);
     status.textContent = playStatusText(info) + (res.warning ? T('common.warn', { msg: res.warning }) : '');
   } catch (e) {
     status.textContent = '';
-    showError(e);   // メロディ(先頭トラック)の記法エラーは原文の行・文字位置で示す
+    showError(e);   // メロディ(先頭チャンネル)の記法エラーは原文の行・文字位置で示す
   }
 }
 document.getElementById('harmGo').addEventListener('click',
@@ -101,7 +101,7 @@ document.getElementById('harmRnd').addEventListener('click',
 // メロディ追い足し
 function doExtend(seed) {
   document.getElementById('extSeed').value = seed;
-  const block = parseTrackBlocks(ta.value)[0];
+  const block = parseChannelBlocks(ta.value)[0];
   if (!block) {
     error.textContent = T('gen.noMelody');
     return;

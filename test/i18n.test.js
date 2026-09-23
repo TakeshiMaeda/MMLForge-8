@@ -88,8 +88,8 @@ module.exports = {
   // ── 文言 ──
   'T は今の言語の文言を返し、params を埋める'() {
     const p = { track: 2, line: 3, col: 5, body: 'X' };
-    eq(loadI18n({ language: 'ja-JP' }).T('err.at', p), 'トラック2 3行目 5文字目: X');
-    eq(loadI18n({ language: 'en-US' }).T('err.at', p), 'Track 2, line 3, col 5: X');
+    eq(loadI18n({ language: 'ja-JP' }).T('err.at', p), 'チャンネル2 3行目 5文字目: X');
+    eq(loadI18n({ language: 'en-US' }).T('err.at', p), 'Channel 2, line 3, col 5: X');
   },
   '表に無いキーはキーそのものを返す（表示が空にならないように）'() {
     eq(loadI18n({ language: 'en-US' }).T('no.such.key'), 'no.such.key');

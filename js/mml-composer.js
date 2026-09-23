@@ -146,7 +146,7 @@ const MMLComposer = (() => {
   const joinBars = (bars) => bars.map(b => b.join(' ')).join(' | ');
   const prefix = (tempo, tr) => `t${tempo} @${tr.wave} v${tr.vol} q${tr.q} ${tr.env}`;
 
-  // ── 各トラック生成 ──
+  // ── 各チャンネル生成 ──
 
   // 1小節ぶんのメロディを生成（強拍=コードトーン(声部連結)、弱拍=スケール順次進行、まれに休符）
   // genMelody と extendMelody で共用。rand の消費順を変えるとシード互換が壊れるので注意
@@ -306,8 +306,8 @@ const MMLComposer = (() => {
   //         --- 以下は雰囲気プリセットの個別上書き（省略時 undefined = プリセットに従う） ---
   //         scale: 'major'|'minor'|'dorian', tempo: BPM直接指定, key: 'c'〜'b'(主音の音名),
   //         density: 0-2(メロディの激しさ),
-  //         drums: true|false, drumStyle: 'hard'|'soft', harm: true|false(ハーモニートラック) }
-  // 戻り値: { tracks: string[], comment: string }
+  //         drums: true|false, drumStyle: 'hard'|'soft', harm: true|false(ハーモニーチャンネル) }
+  // 戻り値: { channels: string[], comment: string }
   function generate(opts = {}) {
     const m = resolveMood(opts);
     const bars = opts.bars || 8;
@@ -322,16 +322,16 @@ const MMLComposer = (() => {
     const keyPc = parseKey(opts.key) ?? autoKey;
     const prog = pick(rand, m.progs);
 
-    const tracks = [
+    const channels = [
       genMelody(rand, m, keyPc, prog, bars, tempo),
       genBass(rand, m, keyPc, prog, bars, tempo),
       genArp(rand, m, keyPc, prog, bars, tempo),
     ];
-    if (m.harm) tracks.push(genHarmony(m, keyPc, prog, bars, tempo));
+    if (m.harm) channels.push(genHarmony(m, keyPc, prog, bars, tempo));
     const useDrums = opts.drums === undefined ? m.drums : opts.drums;
     const drumStyle = (opts.drumStyle === 'hard' || opts.drumStyle === 'soft')
       ? opts.drumStyle : (m.drums ? 'hard' : 'soft');
-    if (useDrums) tracks.push(genDrums(rand, bars, tempo, drumStyle));
+    if (useDrums) channels.push(genDrums(rand, bars, tempo, drumStyle));
 
     const keyName = NOTE_NAMES[keyPc].toUpperCase() + (m.scale === 'major' ? '' : 'm');
     const progName = prog.join('-');
@@ -339,7 +339,7 @@ const MMLComposer = (() => {
       mood: m.label, key: keyName, scale: m.scale, tempo, prog: progName, bars, seed,
       harm: m.harm, drums: useDrums, drumStyle,
     });
-    return { tracks, comment };
+    return { channels, comment };
   }
 
   // ── メロディ伴奏付け（harmonize） ──────────────
@@ -397,10 +397,10 @@ const MMLComposer = (() => {
     return degs;
   }
 
-  // melodyMML: メロディ1トラックのMML文字列
+  // melodyMML: メロディ1チャンネルのMML文字列
   // opts: { mood, seed, drums, drumStyle, harm }（generateと同じ意味。moodは伴奏の音色・スタイルに使う。
   //        scale/tempo はメロディからの推定値を使うため上書き不可）
-  // 戻り値: { tracks: string[](伴奏のみ), comment, warning|null }
+  // 戻り値: { channels: string[](伴奏のみ), comment, warning|null }
   function harmonize(melodyMML, opts = {}) {
     if (typeof MMLPlayer === 'undefined' || !MMLPlayer.parse) {
       throw new Error(T('comp.noPlayer'));
@@ -418,15 +418,15 @@ const MMLComposer = (() => {
 
     const m = resolveMood({ ...opts, scale: undefined });
     m.scale = scaleName;   // スケールは常に推定結果を使う
-    const tracks = [
+    const channels = [
       genBass(rand, m, keyPc, prog, nBars, tempo),
       genArp(rand, m, keyPc, prog, nBars, tempo),
     ];
-    if (m.harm) tracks.push(genHarmony(m, keyPc, prog, nBars, tempo));
+    if (m.harm) channels.push(genHarmony(m, keyPc, prog, nBars, tempo));
     const useDrums = opts.drums === undefined ? m.drums : opts.drums;
     const drumStyle = (opts.drumStyle === 'hard' || opts.drumStyle === 'soft')
       ? opts.drumStyle : (m.drums ? 'hard' : 'soft');
-    if (useDrums) tracks.push(genDrums(rand, nBars, tempo, drumStyle));
+    if (useDrums) channels.push(genDrums(rand, nBars, tempo, drumStyle));
 
     const keyName = NOTE_NAMES[keyPc].toUpperCase() + (scaleName === 'major' ? '' : 'm');
     const comment = T('harm.comment', {
@@ -436,14 +436,14 @@ const MMLComposer = (() => {
     const warning = offBar
       ? T('harm.offBar', { bars: nBars })
       : null;
-    return { tracks, comment, warning };
+    return { channels, comment, warning };
   }
 
   // ── メロディ追い足し（extendMelody） ──────────────
   //   既存メロディのキー・コード進行を推定し、続きの小節を同じ生成ルールで作って末尾に足す。
   //   直前の音から声部連結するので自然につながる。小節の途中で終わっていたら休符で境界まで埋める。
   //
-  // melodyMML: メロディ1トラックのMML文字列
+  // melodyMML: メロディ1チャンネルのMML文字列
   // opts: { seed: number, bars: 追加小節数(既定1), density: 0-2(省略時はメロディの音数から推定),
   //         --- 追加部分の雰囲気を変えるオプション（省略時は元メロディに合わせる） ---
   //         scale: 'major'|'minor'|'dorian'(同主調スケール変更。主音は変えずに明暗を変える),

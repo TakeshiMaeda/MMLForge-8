@@ -27,7 +27,7 @@ module.exports = {
   '言語が違っても生成される曲は同じ'() {
     ['calm', 'mystic', 'intense', 'dark', 'bright'].forEach(mood => {
       const opts = { mood, bars: 8, seed: 42 };
-      eq(en.generate(opts).tracks, ja.generate(opts).tracks, mood);
+      eq(en.generate(opts).channels, ja.generate(opts).channels, mood);
     });
   },
 
@@ -35,8 +35,8 @@ module.exports = {
     const r = en.harmonize('t120 l4 c d e f g', { seed: 5 });
     eq(r.warning, 'The melody is not exactly 2 bars of 4/4. Pad the end with r to line up the loop');
     ok(r.comment.startsWith('; Accompaniment: '), r.comment);
-    eq(en.harmonize('t120 l4 c d e f g', { seed: 5 }).tracks,
-      ja.harmonize('t120 l4 c d e f g', { seed: 5 }).tracks, '伴奏そのものは言語に依らない');
+    eq(en.harmonize('t120 l4 c d e f g', { seed: 5 }).channels,
+      ja.harmonize('t120 l4 c d e f g', { seed: 5 }).channels, '伴奏そのものは言語に依らない');
   },
 
   '追い足しの警告も表示言語で書く'() {

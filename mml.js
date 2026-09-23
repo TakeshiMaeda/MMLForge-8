@@ -1,14 +1,14 @@
 // MMLForge-8 / MMLPlayer — MML(Music Macro Language) パーサ + Web Audio シーケンサ（外部依存なし）
-// mml.js v1.0.0
+// mml.js v1.0.1
 // Copyright (c) 2026 Takeshi Maeda (SPSoft)
 // SPDX-License-Identifier: MIT
 // この1ファイルだけコピーして使う場合も、上記の著作権表示とMITライセンス全文を添えること。
 //
 // ブラウザに <script src="mml.js"> で読み込むだけで、グローバル MMLPlayer が使える。
 // 例: MMLPlayer.play(['t120 l8 cdefgab>c'], { loop: true });
-//     MMLPlayer.setTrackMute(0, true);   // 再生中のトラック0を即時ミュート（false で復帰）
+//     MMLPlayer.setTrackMute(0, true);   // 再生中のチャンネル0を即時ミュート（false で復帰）
 //
-// 対応記法（1トラック = 1文字列、複数トラックで和音・伴奏）:
+// 対応記法（1チャンネル = 1文字列、複数チャンネルで和音・伴奏）:
 //   c d e f g a b   音符。直後に # or + でシャープ、- でフラット
 //   数字            音長（4=四分, 8=八分, 12=三連 等）。省略時は l の値
 //   .               付点（重ねがけ可: c4. c4..）
@@ -33,10 +33,10 @@
 //   @b<ずれ>,<時間> ベンド。出だしの音程を「ずれ」セント（負で下から/正で上から。+ を付けてもよい）ずらし、
 //                     「時間」ミリ秒で正規の音程へ寄せる。次の音符1つにだけ効く（休符は
 //                     消費しない）ので解除は不要。m と同じ detune 上で加算される
-//   [ ... ]<n>      リピート n回（ネスト可）。1トラックの音符+休符が 100万 を超えるとエラー
+//   [ ... ]<n>      リピート n回（ネスト可）。1チャンネルの音符+休符が 100万 を超えるとエラー
 //   [ ... ]0        n を省略するか 0 で無限ループ: 2周目以降ここから繰り返す（曲のループ開始点）。
-//                   トラック末尾にのみ書ける。ループ再生OFF時は1回だけ演奏。
-//                   複数トラックに書いた場合は最も遅い開始点を曲のループ開始点に採用。
+//                   チャンネル末尾にのみ書ける。ループ再生OFF時は1回だけ演奏。
+//                   複数チャンネルに書いた場合は最も遅い開始点を曲のループ開始点に採用。
 //                   & の直後に置いてもよい（c4& [d4 e4]0）: 1周目は繋いで鳴り、2周目以降は d4 を頭から鳴らす
 //   |               小節区切り（無視される。見た目整理用）
 //   スペース・改行   無視
@@ -44,15 +44,15 @@
 // 記法エラーは MMLError を投げる。表示用の文言は持たない（言語に依存させないため）:
 //   code   … エラーの種類を表す識別子（'BAD_CHAR' 'O_RANGE' など。message も同じ値）
 //   params … 文言に埋める値（{ char } { max } { label }）。MMLの記号と数値だけ
-//   track  … 0始まりのトラック番号。曲全体のエラー（NO_NOTES）は null
+//   track  … 0始まりのチャンネル番号。曲全体のエラー（NO_NOTES）は null
 //   pos    … 1始まりの「原文」の文字位置。リピート [ ]n の後ろでも展開後の位置にはならない
 // 文言は利用側で code から作る（このリポジトリでは js/mml-messages.js が持つ）
 const MMLPlayer = (() => {
-  const VERSION = '1.0.0';   // 冒頭コメントの「mml.js v…」と揃えること
+  const VERSION = '1.0.1';   // 冒頭コメントの「mml.js v…」と揃えること
   let _ctx        = null;
   let _masterGain = null;
   let _sessionGain = null;   // 再生セッションごとの出力（stop で切断して即消音）
-  let _trackGains  = [];     // トラック別ゲイン（setTrackMute 用）
+  let _channelGains  = [];     // チャンネル別ゲイン（setTrackMute 用）
   let _timer   = null;
   let _events  = [];
   let _ptr     = 0;
@@ -72,7 +72,7 @@ const MMLPlayer = (() => {
   const TICK_MS = 50;
   const LFO_FADE = 0.05;   // LFOが効き始めるときの立ち上がり時間（秒）
   const STOP_FADE = 0.02;  // stop() で音を消すときのフェード時間（秒）
-  // 1トラックの音符+休符の上限。リピートのタイプミス（[[[c]99]99]99 等）でブラウザが固まるのを防ぐ。
+  // 1チャンネルの音符+休符の上限。リピートのタイプミス（[[[c]99]99]99 等）でブラウザが固まるのを防ぐ。
   // 1音あたり約570B なので 100万で約0.6GB・パース約0.4秒
   const MAX_STEPS = 1000000;
 
@@ -113,9 +113,9 @@ const MMLPlayer = (() => {
   //
   // リピート [ ]n はテキストを展開せず、] に来たときに [ の直後へ読み戻して n 回走査する。
   // こうするとエラーの「位置M」が常に原文の文字位置になる（展開すると後ろの位置がずれる）。
-  // 投げる Error には message のほか track（0始まりのトラック番号）と pos（1始まりの位置）を付ける
+  // 投げる Error には message のほか track（0始まりのチャンネル番号）と pos（1始まりの位置）を付ける
 
-  function _parseTrack(src, ti) {
+  function _parseChannel(src, ci) {
     let pos = 0;
     let oct = 4, defLen = 4, tempo = 120, vol = 10, wave = 1, q = 8;
     let env = { a: 3, d: 0, s: 100, r: 40 };
@@ -132,7 +132,7 @@ const MMLPlayer = (() => {
     //   tieAt=[ の時点で & が保留中ならその繋ぎ先イベントの index（無ければ -1）
     const stack = [];
 
-    const err = (code, params = {}, at = pos) => new MMLError(code, params, ti, at + 1);
+    const err = (code, params = {}, at = pos) => new MMLError(code, params, ci, at + 1);
     // 値の範囲エラーは「その値の先頭」を指したいので、読んだ数値の開始位置を覚えておく
     // （数値が無かった場合は「数値があるべき場所」がそのまま入る）
     let numAt = 0;      // 直近の readInt で読んだ値の開始位置
@@ -211,7 +211,7 @@ const MMLPlayer = (() => {
           tie = false;
         } else {
           evs.push({
-            time, dur, midi, track: ti, q,
+            time, dur, midi, channel: ci, q,
             gate: Math.max(dur * q / 8, 0.02),
             freq, wave,
             vol: Math.max((vol / 15) * 0.3, 0.0005),
@@ -241,7 +241,7 @@ const MMLPlayer = (() => {
         pos++;
         const n = readInt();
         if (n === null || n === 0) {
-          // 無限ループ。後続に音符等があると「どこまでがループか」が曖昧になるため、トラック末尾のみ許可
+          // 無限ループ。後続に音符等があると「どこまでがループか」が曖昧になるため、チャンネル末尾のみ許可
           if (stack.length > 1 || /[^\s|]/.test(src.slice(pos))) {
             throw err('LOOP_NOT_LAST', {}, fr.open);
           }
@@ -334,11 +334,11 @@ const MMLPlayer = (() => {
     return { evs, dur: time, tempo, loopStart };
   }
 
-  function _parse(tracks) {
-    const parsed = tracks.map((src, ti) => _parseTrack(src, ti));
+  function _parse(channels) {
+    const parsed = channels.map((src, ci) => _parseChannel(src, ci));
     const songDur = parsed.reduce((d, p) => Math.max(d, p.dur), 0);
-    // 無限ループ [ ]0 のトラックは、より長いトラックに合わせて本体を曲末まで敷き詰める。
-    // 曲全体のループ開始点は最も遅いマーカー位置（イントロが最長のトラックに合わせる）。
+    // 無限ループ [ ]0 のチャンネルは、より長いチャンネルに合わせて本体を曲末まで敷き詰める。
+    // 曲全体のループ開始点は最も遅いマーカー位置（イントロが最長のチャンネルに合わせる）。
     // 敷き詰めがループ区間で切れずにつながるよう、本体の長さはループ区間長の約数にしておくこと
     let loopStart = null;
     const all = [];
@@ -366,7 +366,7 @@ const MMLPlayer = (() => {
   function _scheduleNote(ev, t) {
     const c = _ctx;
     const g = c.createGain();
-    g.connect(_trackGains[ev.track] || _sessionGain);
+    g.connect(_channelGains[ev.channel] || _sessionGain);
 
     // ノイズはバンドパスで帯域の大半を捨てるぶん音量が大きく下がる（低音ほど顕著）ので、
     // 通過帯域幅に応じたメイクアップゲインで他の波形と聴感を揃える
@@ -487,23 +487,23 @@ const MMLPlayer = (() => {
       setTimeout(() => g.disconnect(), STOP_FADE * 1000 + 50);
       _sessionGain = null;
     }
-    _trackGains = [];
+    _channelGains = [];
     _events = [];
   }
 
-  // tracks: MML文字列 or その配列。opts: { loop: true }
+  // channels: MML文字列 or その配列。opts: { loop: true }
   // 戻り値: { duration, loopStart } （1周目の秒数と、無限ループ [ ]0 の開始秒。未使用時 null。
   //          2周目以降の1ループは duration - loopStart 秒）。パース失敗時は Error を投げる
-  function play(tracks, opts = {}) {
-    if (typeof tracks === 'string') tracks = [tracks];
-    const { events, duration, loopStart } = _parse(tracks);  // 先にパース（失敗時は現行再生を守る）
+  function play(channels, opts = {}) {
+    if (typeof channels === 'string') channels = [channels];
+    const { events, duration, loopStart } = _parse(channels);  // 先にパース（失敗時は現行再生を守る）
     if (duration <= 0) throw new MMLError('NO_NOTES');
     stop();
     const c = _getCtx();
     _sessionGain = c.createGain();
     _sessionGain.gain.value = 0.6;   // 同時発音ヘッドルーム
     _sessionGain.connect(_masterGain);
-    _trackGains = tracks.map(() => {
+    _channelGains = channels.map(() => {
       const g = c.createGain();
       g.connect(_sessionGain);
       return g;
@@ -529,21 +529,21 @@ const MMLPlayer = (() => {
     if (_masterGain) _masterGain.gain.value = _volume;
   }
 
-  // 再生中のトラックを即時ミュート/解除する（i は play() に渡した配列のインデックス）
+  // 再生中のチャンネルを即時ミュート/解除する（i は play() に渡した配列のインデックス）
   function setTrackMute(i, muted) {
-    const g = _trackGains[i];
+    const g = _channelGains[i];
     if (!g || !_ctx) return;
     const t = _ctx.currentTime;
     g.gain.cancelScheduledValues(t);
     g.gain.setTargetAtTime(muted ? 0 : 1, t, 0.01);   // 10msで滑らかに（クリックノイズ回避）
   }
 
-  // 単一トラックをパースして音符列を返す（作曲支援ツール用。再生はしない）
-  // track は省略可。エラー文言の「トラックN」に使う0始まりの番号（複数トラックを1本ずつ調べるとき用）
+  // 単一チャンネルをパースして音符列を返す（作曲支援ツール用。再生はしない）
+  // track は省略可。エラー文言の「チャンネルN」に使う0始まりの番号（複数チャンネルを1本ずつ調べるとき用）
   // 戻り値: { notes: [{time,dur,midi}], duration, tempo, loopStart }
   //         （loopStart は無限ループ [ ]0 の開始秒。未使用時 null。本体の敷き詰めはしない）
   function parse(src, track = 0) {
-    const { evs, dur, tempo, loopStart } = _parseTrack(String(src), track | 0);
+    const { evs, dur, tempo, loopStart } = _parseChannel(String(src), track | 0);
     return {
       notes: evs.filter(e => !e.loopOnly).map(e => ({ time: e.time, dur: e.dur, midi: e.midi })),
       duration: dur,

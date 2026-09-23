@@ -64,10 +64,10 @@ const drOut = document.getElementById('drOut');
 const drStatus = document.getElementById('drStatus');
 const drSave = () => localStorage.setItem('mmlforge8-drum', JSON.stringify(drum));
 
-// グリッド → MMLトラック配列。打点のない行は無視し、打点が重ならない行同士は
+// グリッド → MMLチャンネル配列。打点のない行は無視し、打点が重ならない行同士は
 // 1チャンネルにまとめる（first-fit。音符ごとに独立発音するエンジンなので余韻の重なりも
 // 分割出力と同一に鳴る）。同一ステップの同時打鍵だけはMMLで表現できないためチャンネルを分ける
-function drumToTracks() {
+function drumToChannels() {
   const steps = drum.bars * 16;
   const act = [];
   drum.tracks.forEach((tr, ti) => {
@@ -112,7 +112,7 @@ function drumToTracks() {
 }
 
 function updateDrumOut() {
-  drOut.value = drumToTracks().join('\n');
+  drOut.value = drumToChannels().join('\n');
 }
 function drChanged() {
   drSave();
@@ -327,10 +327,10 @@ document.getElementById('drBars').addEventListener('change', () => {
   renderDrumPad();
 });
 document.getElementById('drPlay').addEventListener('click', () => {
-  const trks = drumToTracks();
-  if (!trks.length) { drStatus.textContent = T('drum.noHits'); return; }
+  const chs = drumToChannels();
+  if (!chs.length) { drStatus.textContent = T('drum.noHits'); return; }
   try {
-    MMLPlayer.play(trks, { loop: true });
+    MMLPlayer.play(chs, { loop: true });
     drStatus.textContent = T('drum.playing');
   } catch (e) {
     drStatus.textContent = e.code ? mmlMessage(e) : e.message;   // パッドのMMLは本編と別なので位置は出さない
@@ -353,9 +353,9 @@ document.getElementById('drCopy').addEventListener('click', () => {
   drStatus.textContent = T('common.copied');
 });
 document.getElementById('drInsert').addEventListener('click', () => {
-  const trks = drumToTracks();
-  if (!trks.length) { drStatus.textContent = T('drum.noHits'); return; }
-  applyText(ta.value.trimEnd() + '\n\n' + trks.join('\n') + '\n');
+  const chs = drumToChannels();
+  if (!chs.length) { drStatus.textContent = T('drum.noHits'); return; }
+  applyText(ta.value.trimEnd() + '\n\n' + chs.join('\n') + '\n');
   drStatus.textContent = T('drum.inserted');
 });
 

@@ -51,24 +51,24 @@
   <div class="win-bar"><span class="win-title"><span class="ja">エディタ</span><span class="en">Editor</span></span></div>
   <div class="win-body win-editor">
     <div class="win-help">
-      <p class="hint ja">行頭から始まる行 = 新トラック（複数トラックは同時再生で和音・伴奏）。行頭に空白を入れた行は前のトラックの続き（トラック内で自由に改行できます）。コメントは「;」（そこから行末まで。行の途中でも可）と /* ～ */（複数行またぎも可）の2種類で、空行とともに無視されます。行頭の /* コメント */ の直後に続けて書いた内容は継続行扱いになるので、新トラックにしたいときはコメントを前の行に分けてください。内容は自動保存されます。
-「記述を最適化」は選択範囲（未選択なら全体）の冗長な書き方を縮めます（l と同じ音長の明示指定を削除、絶対オクターブ指定を &gt; &lt; に変換）。l 指定の無い区間に4分音符があればトラックの頭に l4 を足して数字を省きます（c4 d4 e4 f4 → l4 c d e f）。最初に出てくる o は残すので、暗黙の初期値に依存する形にはなりません。音が変わらないことを検算してから適用します。
-「mml.js用にコピー」はコメントを除去し1行=1トラックに整形してコピーします（他プロジェクトの mml.js へ持ち出す用）。</p>
-      <p class="hint en">A line that starts at the left edge is a new track (tracks play together for chords and accompaniment). A line that starts with a space continues the track above, so you can break a track over as many lines as you like. Comments are ";" (to the end of the line, also mid-line) and /* ... */ (can span lines); they are ignored, as are blank lines. Text written right after a /* comment */ at the start of a line counts as a continuation line, so put the comment on its own line when you want a new track. Your text is saved automatically.
-"Optimize" shortens redundant writing in the selection, or in the whole text if nothing is selected: it removes lengths that equal the current l and turns absolute octaves into &gt; &lt;. If a part with no l has quarter notes, it adds l4 at the head of the track and drops the numbers (c4 d4 e4 f4 → l4 c d e f). The first o is kept, so the result never relies on the implicit default. It checks that the sound does not change before applying.
-"Copy for mml.js" removes comments and copies one line per track (for taking your song to mml.js in another project).</p>
+      <p class="hint ja">行頭から始まる行 = 新チャンネル（複数チャンネルは同時再生で和音・伴奏）。行頭に空白を入れた行は前のチャンネルの続き（チャンネル内で自由に改行できます）。コメントは「;」（そこから行末まで。行の途中でも可）と /* ～ */（複数行またぎも可）の2種類で、空行とともに無視されます。行頭の /* コメント */ の直後に続けて書いた内容は継続行扱いになるので、新チャンネルにしたいときはコメントを前の行に分けてください。内容は自動保存されます。
+「記述を最適化」は選択範囲（未選択なら全体）の冗長な書き方を縮めます（l と同じ音長の明示指定を削除、絶対オクターブ指定を &gt; &lt; に変換）。l 指定の無い区間に4分音符があればチャンネルの頭に l4 を足して数字を省きます（c4 d4 e4 f4 → l4 c d e f）。最初に出てくる o は残すので、暗黙の初期値に依存する形にはなりません。音が変わらないことを検算してから適用します。
+「mml.js用にコピー」はコメントを除去し1行=1チャンネルに整形してコピーします（他プロジェクトの mml.js へ持ち出す用）。</p>
+      <p class="hint en">A line that starts at the left edge is a new channel (channels play together for chords and accompaniment). A line that starts with a space continues the channel above, so you can break a channel over as many lines as you like. Comments are ";" (to the end of the line, also mid-line) and /* ... */ (can span lines); they are ignored, as are blank lines. Text written right after a /* comment */ at the start of a line counts as a continuation line, so put the comment on its own line when you want a new channel. Your text is saved automatically.
+"Optimize" shortens redundant writing in the selection, or in the whole text if nothing is selected: it removes lengths that equal the current l and turns absolute octaves into &gt; &lt;. If a part with no l has quarter notes, it adds l4 at the head of the channel and drops the numbers (c4 d4 e4 f4 → l4 c d e f). The first o is kept, so the result never relies on the implicit default. It checks that the sound does not change before applying.
+"Copy for mml.js" removes comments and copies one line per channel (for taking your song to mml.js in another project).</p>
     </div>
-    <div class="ch-strip" title="チェックしたチャンネルだけ鳴ります（再生中の切替は即ミュート/復帰）。伴奏付け・追い足しの対象はチェックに関係なく先頭トラックです" data-title-en="Only checked channels play (switching during playback mutes or unmutes at once). Accompaniment and melody extension always use the first track, whatever the checkboxes say">
+    <div class="ch-strip" title="チェックしたチャンネルだけ鳴ります（再生中の切替は即ミュート/復帰）。伴奏付け・追い足しの対象はチェックに関係なく先頭チャンネルです" data-title-en="Only checked channels play (switching during playback mutes or unmutes at once). Accompaniment and melody extension always use the first channel, whatever the checkboxes say">
       <span class="ch-label"><span class="ja">チャンネル</span><span class="en">Channels</span></span>
       <div id="chToggles" class="ch-list"></div>
     </div>
     <textarea id="mml" spellcheck="false"></textarea>
     <div class="controls toolbar">
       <button id="optMml" title="選択範囲（未選択なら全体）の冗長な記述を縮めます。l と同じ音長の明示指定を削除し、絶対オクターブ指定を &gt; &lt; に変換します。l 指定の無い区間に4分音符があれば頭に l4 を足して省略します" data-title-en="Shortens redundant writing in the selection (or the whole text). Removes lengths that equal the current l and turns absolute octaves into &gt; &lt;. If a part with no l has quarter notes, adds l4 at the head and drops the numbers"><span class="ja">記述を最適化</span><span class="en">Optimize</span></button>
-      <button id="copyMml" title="コメントを除去し、1行=1トラックに整形してコピーします（mml.js にそのまま渡せる形）" data-title-en="Removes comments and copies one line per track (a form mml.js takes as is)"><span class="ja">mml.js用にコピー</span><span class="en">Copy for mml.js</span></button>
+      <button id="copyMml" title="コメントを除去し、1行=1チャンネルに整形してコピーします（mml.js にそのまま渡せる形）" data-title-en="Removes comments and copies one line per channel (a form mml.js takes as is)"><span class="ja">mml.js用にコピー</span><span class="en">Copy for mml.js</span></button>
       <span class="sep"></span>
       <label title="1小節が4分音符いくつぶんか。4/4なら4、3/4なら3、6/8は8分6つ＝4分3つなので3" data-title-en="How many quarter notes make one bar: 4 for 4/4, 3 for 3/4, and 3 for 6/8 (six eighths = three quarters)"><span class="ja">1小節</span><span class="en">1 bar =</span> <input type="number" id="barBeats" value="4" min="1" max="32" style="width:48px"><span class="ja">拍</span><span class="en"> beats</span></label>
-      <button id="checkBars" title="各トラックの尺が小節の整数倍か、全トラックで揃っているかを調べます。崩れている場合は小節線から外れ始めた行を示します" data-title-en="Checks that each track is a whole number of bars and that all tracks are the same length. If not, shows the line where a track first drifts off the bar lines"><span class="ja">小節チェック</span><span class="en">Check bars</span></button>
+      <button id="checkBars" title="各チャンネルの尺が小節の整数倍か、全チャンネルで揃っているかを調べます。崩れている場合は小節線から外れ始めた行を示します" data-title-en="Checks that each channel is a whole number of bars and that all channels are the same length. If not, shows the line where a channel first drifts off the bar lines"><span class="ja">小節チェック</span><span class="en">Check bars</span></button>
     </div>
     <pre id="barReport"></pre>
   </div>
@@ -144,8 +144,8 @@ Generating replaces the text area and plays at once ("Undo" swaps it with the pr
   <div class="win-bar"><span class="win-title"><span class="ja">伴奏付け</span><span class="en">Accompaniment</span></span></div>
   <div class="win-body">
     <div class="win-help">
-      <p class="hint ja">先頭トラック（最初のコメント以外のブロック）をメロディとみなし、キーとコード進行を推定してベース・アルペジオ等の伴奏を生成します。スケール・キー・テンポはメロディから推定するため設定はありません。雰囲気は伴奏の音色・パターンに使います。鍵盤録音や音声採譜のMMLにもどうぞ。</p>
-      <p class="hint en">Treats the first track (the first block that is not a comment) as the melody, estimates its key and chord progression, and generates bass, arpeggio and other accompaniment. The scale, key and tempo come from the melody, so there are no settings for them. The mood sets the accompaniment's sounds and patterns. Works on MML from the keyboard recorder or audio transcription too.</p>
+      <p class="hint ja">先頭チャンネル（最初のコメント以外のブロック）をメロディとみなし、キーとコード進行を推定してベース・アルペジオ等の伴奏を生成します。スケール・キー・テンポはメロディから推定するため設定はありません。雰囲気は伴奏の音色・パターンに使います。鍵盤録音や音声採譜のMMLにもどうぞ。</p>
+      <p class="hint en">Treats the first channel (the first block that is not a comment) as the melody, estimates its key and chord progression, and generates bass, arpeggio and other accompaniment. The scale, key and tempo come from the melody, so there are no settings for them. The mood sets the accompaniment's sounds and patterns. Works on MML from the keyboard recorder or audio transcription too.</p>
     </div>
     <div class="controls">
       <label><span class="ja">雰囲気</span><span class="en">Mood</span> <select id="harmMood"></select></label>
@@ -251,7 +251,7 @@ Use "Save" to name an adjusted sound and keep it as a user instrument. It appear
     </div>
     <div id="drPad" class="dgrid"></div>
     <div class="kb-out">
-      <textarea id="drOut" readonly rows="2" placeholder="打ち込むとここにMMLが出ます（1行=1トラック）" data-placeholder-en="The MML appears here as you enter hits (one line per track)"></textarea>
+      <textarea id="drOut" readonly rows="2" placeholder="打ち込むとここにMMLが出ます（1行=1チャンネル）" data-placeholder-en="The MML appears here as you enter hits (one line per channel)"></textarea>
       <button id="drCopy"><span class="ja">コピー</span><span class="en">Copy</span></button>
       <button id="drInsert"><span class="ja">本編末尾に挿入</span><span class="en">Add to the end of the main text</span></button>
     </div>
@@ -262,9 +262,9 @@ Use "Save" to name an adjusted sound and keep it as a user instrument. It appear
   <div class="win-bar"><span class="win-title"><span class="ja">ミニ鍵盤</span><span class="en">Mini keyboard</span></span></div>
   <div class="win-body">
     <div class="win-help">
-      <p class="hint ja">エンベロープ初期値: 鍵盤 @e3,0,100,80（手弾き向けにリリース長め）／ MMLエンジン @e3,0,100,40（トラックに @e 未記載のときの値）
+      <p class="hint ja">エンベロープ初期値: 鍵盤 @e3,0,100,80（手弾き向けにリリース長め）／ MMLエンジン @e3,0,100,40（チャンネルに @e 未記載のときの値）
 単音（モノフォニック）録音です。重ねて弾いた音は前の音を切って直列化します。最初の打鍵が拍頭（時刻0）扱い。</p>
-      <p class="hint en">Default envelope: keyboard @e3,0,100,80 (longer release for playing by hand) / MML engine @e3,0,100,40 (used when a track has no @e)
+      <p class="hint en">Default envelope: keyboard @e3,0,100,80 (longer release for playing by hand) / MML engine @e3,0,100,40 (used when a channel has no @e)
 Monophonic recording. A note played over another cuts the earlier one, so notes play one after another. The first key press counts as the downbeat (time 0).</p>
     </div>
     <div class="controls">
@@ -359,7 +359,7 @@ The first detected note counts as the downbeat (time 0), so set the BPM to the t
       <tr><td>r</td><td><span class="ja">休符（音長指定は音符と同じ）</span><span class="en">Rest (lengths work as for notes)</span></td></tr>
       <tr><td>o4 / &gt; / &lt;</td><td><span class="ja">オクターブ指定 / +1 / -1（o4 の a = 440Hz）</span><span class="en">Set octave / up 1 / down 1 (a in o4 = 440 Hz)</span></td></tr>
       <tr><td>l8</td><td><span class="ja">デフォルト音長（初期値4）</span><span class="en">Default length (default 4)</span></td></tr>
-      <tr><td>t140</td><td><span class="ja">テンポBPM（初期値120。全トラックに書くこと）</span><span class="en">Tempo in BPM (default 120; write it in every track)</span></td></tr>
+      <tr><td>t140</td><td><span class="ja">テンポBPM（初期値120。全チャンネルに書くこと）</span><span class="en">Tempo in BPM (default 120; write it in every channel)</span></td></tr>
       <tr><td><span class="ja">v0〜v15</span><span class="en">v0-v15</span></td><td><span class="ja">音量（初期値10）</span><span class="en">Volume (default 10)</span></td></tr>
       <tr><td><span class="ja">q1〜q8</span><span class="en">q1-q8</span></td><td><span class="ja">ゲートタイム。8=音長いっぱい、小さいほどスタッカート（初期値8）</span><span class="en">Gate time. 8 = full length, smaller = more staccato (default 8)</span></td></tr>
       <tr><td><span class="ja">@0〜@4</span><span class="en">@0-@4</span></td><td><span class="ja">音色: 0=sine 1=square 2=triangle 3=saw 4=noise（初期値1）</span><span class="en">Wave: 0=sine 1=square 2=triangle 3=saw 4=noise (default 1)</span></td></tr>
@@ -368,8 +368,8 @@ The first detected note counts as the downbeat (time 0), so set the BPM to the t
       <tr><td>m120,5,30</td><td><span class="ja">LFO（ビブラート）: 遅れ(ms), 速さ(Hz), 深さ(セント。中心から±)。遅れは音符ごとに数え直す。<b>初期値 m0,0,0</b>＝無効</span><span class="en">LFO (vibrato): delay (ms), rate (Hz), depth (cents, ± around the center). The delay restarts on each note. <b>Default m0,0,0</b> = off</span></td></tr>
       <tr><td>p60</td><td><span class="ja">ポルタメント。&amp; の繋ぎ目を60msかけて滑らせる（&amp; が無い並びには効かない）。<b>初期値 p0</b>＝瞬時に切り替え</span><span class="en">Portamento. Glides over 60 ms at each &amp; joint (no effect without &amp;). <b>Default p0</b> = instant</span></td></tr>
       <tr><td>@b-200,60</td><td><span class="ja">ベンド。出だしを200セント下（負で下・正で上。@b+200,60 とも書ける）から60msで正規の音程へ。<b>次の音符1つにだけ効く</b>ので解除は不要（休符は消費しない）</span><span class="en">Bend. Starts 200 cents below (negative = below, positive = above; @b+200,60 also works) and reaches the pitch in 60 ms. <b>Applies to the next note only</b>, so there is nothing to reset (rests do not use it up)</span></td></tr>
-      <tr><td>[ ... ]3</td><td><span class="ja">リピート3回（ネスト可）。1トラックの音符+休符が100万を超えるとエラー</span><span class="en">Repeat 3 times (can nest). An error if one track expands to more than 1,000,000 notes and rests</span></td></tr>
-      <tr><td>[ ... ]0</td><td><span class="ja">数字なし・0 は無限ループ: 2周目以降ここから繰り返す（イントロ付きループ用。トラック末尾にのみ書ける。複数トラックでは最も遅い開始点を採用）</span><span class="en">No number or 0 = infinite loop: from the second time on, playback repeats from here (for loops with an intro; only at the end of a track; with several tracks the latest start point is used)</span></td></tr>
+      <tr><td>[ ... ]3</td><td><span class="ja">リピート3回（ネスト可）。1チャンネルの音符+休符が100万を超えるとエラー</span><span class="en">Repeat 3 times (can nest). An error if one channel expands to more than 1,000,000 notes and rests</span></td></tr>
+      <tr><td>[ ... ]0</td><td><span class="ja">数字なし・0 は無限ループ: 2周目以降ここから繰り返す（イントロ付きループ用。チャンネル末尾にのみ書ける。複数チャンネルでは最も遅い開始点を採用）</span><span class="en">No number or 0 = infinite loop: from the second time on, playback repeats from here (for loops with an intro; only at the end of a channel; with several channels the latest start point is used)</span></td></tr>
       <tr><td>|</td><td><span class="ja">小節区切り（再生には影響しない。見た目整理用）</span><span class="en">Bar line (no effect on playback; for readability)</span></td></tr>
     </table>
     <p class="hint ja">&amp; で繋いだ音は<b>1回しか発音しません</b>（音色・音量・エンベロープは繋いだ先頭の音のものを全体に使います）。m の遅れも繋いだ全体の頭から数えるので、長く伸ばすほどビブラートが育ちます。
@@ -379,11 +379,11 @@ The first detected note counts as the downbeat (time 0), so set the BPM to the t
     m and @b are both in cents and add up on the same detune, so @b-100,60 m120,5,30 scoops up into the note and then starts to wobble.
     Moves you can write as note names (a half or whole step, such as bending a harmonica note and releasing it) can be written with p and &amp;: <code>p40 o4 e16&amp;d16&amp;e2.</code> — one attack, moving E→D→E in one breath.</p>
     <p class="hint ja">上の表はエンジン（mml.js）自体の記法です。mml.js が読み飛ばすのは<b>空白・タブ・改行・|</b> の4つだけで、それ以外の未知の文字はエラーになります。
-    コメント（; と /* ～ */）と「行頭=新トラック / 行頭空白=継続行」は<b>このエディタ側の機能</b>で、mml.js 単体にはありません（mml.js へは1トラック=1文字列の配列で渡します）。
-    他プロジェクトの mml.js で鳴らしたいときは「mml.js用にコピー」ボタンを使うと、コメントを除去し継続行を連結した1行=1トラックの形でコピーできます。</p>
+    コメント（; と /* ～ */）と「行頭=新チャンネル / 行頭空白=継続行」は<b>このエディタ側の機能</b>で、mml.js 単体にはありません（mml.js へは1チャンネル=1文字列の配列で渡します）。
+    他プロジェクトの mml.js で鳴らしたいときは「mml.js用にコピー」ボタンを使うと、コメントを除去し継続行を連結した1行=1チャンネルの形でコピーできます。</p>
     <p class="hint en">The table above is the notation of the engine (mml.js) itself. mml.js skips only <b>spaces, tabs, line breaks and |</b>; any other unknown character is an error.
-    Comments (; and /* ... */) and "left edge = new track / leading space = continuation" are <b>features of this editor</b>, not of mml.js (mml.js takes an array with one string per track).
-    To play your song with mml.js in another project, use the "Copy for mml.js" button: it removes comments and joins continuation lines into one line per track.</p>
+    Comments (; and /* ... */) and "left edge = new channel / leading space = continuation" are <b>features of this editor</b>, not of mml.js (mml.js takes an array with one string per channel).
+    To play your song with mml.js in another project, use the "Copy for mml.js" button: it removes comments and joins continuation lines into one line per channel.</p>
   </div>
 </section>
 

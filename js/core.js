@@ -26,21 +26,21 @@ const vol    = document.getElementById('vol');
 // ── 版の表記 ──
 // アプリの版はここ、エンジンの版は mml.js 自身が持つ（MMLPlayer.version）。
 // 1行で書くときは mml.js を括弧に入れる。2行で書けるところ（README）は上下に並べる
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 function versionText() {
   return `MMLForge-8 v${APP_VERSION} (mml.js v${MMLPlayer.version})`;
 }
 document.getElementById('version').textContent = versionText();
 
 // ── チャンネルON/OFF ──
-// chOn[i] = トラックiを再生するか。OFFでも再生には全トラックを渡し、トラック別ゲインでミュートする
-// （再生中の切替を即反映するため）。伴奏付け・追い足しの対象はミュート状態と無関係に先頭トラック
+// chOn[i] = チャンネルiを再生するか。OFFでも再生には全チャンネルを渡し、チャンネル別ゲインでミュートする
+// （再生中の切替を即反映するため）。伴奏付け・追い足しの対象はミュート状態と無関係に先頭チャンネル
 const chBox = document.getElementById('chToggles');
 let chOn = [];
 try { chOn = JSON.parse(localStorage.getItem('mmlforge8-ch')) || []; } catch (e) { chOn = []; }
 
 function renderChToggles() {
-  const blocks = parseTrackBlocks(ta.value);
+  const blocks = parseChannelBlocks(ta.value);
   chOn = blocks.map((b, i) => chOn[i] !== false);   // 新チャンネルはON
   localStorage.setItem('mmlforge8-ch', JSON.stringify(chOn));
   chBox.innerHTML = '';
@@ -69,8 +69,8 @@ function applyText(text) {
 }
 
 // 再生 + OFFチャンネルのミュート適用
-function playTracks(trks) {
-  const info = MMLPlayer.play(trks, { loop: loopCk.checked });
+function playChannels(chs) {
+  const info = MMLPlayer.play(chs, { loop: loopCk.checked });
   chOn.forEach((on, i) => { if (!on) MMLPlayer.setTrackMute(i, true); });
   return info;
 }
@@ -117,17 +117,17 @@ function stripComments(text) {
   return out;
 }
 
-// テキストエリアをトラックブロックに分解する（トラック分割のルールはここだけが知っている）
-// ルール: 行頭から始まる行 = 新トラック。行頭が空白の行 = 前のトラックの継続。
+// テキストエリアをチャンネルブロックに分解する（チャンネル分割のルールはここだけが知っている）
+// ルール: 行頭から始まる行 = 新チャンネル。行頭が空白の行 = 前のチャンネルの継続。
 //         コメント（; 行末まで / ブロック /* */）は stripComments で空白化済みのため
-//         コメントだけの行や空行は透過（トラックを分断しない。トラック途中に挟める）
+//         コメントだけの行や空行は透過（チャンネルを分断しない。チャンネル途中に挟める）
 // 戻り値: [{ mml, start, end, lines, pieces }]
-//   mml    … 各行を trim して ' ' で連結した1トラック分のMML（mml.js にそのまま渡せる）
-//   start/end … トラックに属する行の範囲（0始まりの行インデックス）
+//   mml    … 各行を trim して ' ' で連結した1チャンネル分のMML（mml.js にそのまま渡せる）
+//   start/end … チャンネルに属する行の範囲（0始まりの行インデックス）
 //   lines  … 属する行の一覧 [{ no: 1始まりの行番号, text: trim済み }]（空行・コメントのみの行は除く）
 //   pieces … mml の各行ぶんが原文のどこから来たか [{ from: mml内の開始位置, line: 0始まり行, col: 0始まり桁 }]
-//            （mml.js のエラー位置を原文の行・桁に戻すための対応表。trackPos が使う）
-function parseTrackBlocks(text) {
+//            （mml.js のエラー位置を原文の行・桁に戻すための対応表。channelPos が使う）
+function parseChannelBlocks(text) {
   const lines = stripComments(text).split('\n');
   const blocks = [];
   let cur = null;
@@ -149,7 +149,7 @@ function parseTrackBlocks(text) {
 }
 
 // mml.js が返す位置（block.mml 内の1始まりの文字位置）を原文の { line, col }（どちらも1始まり）に戻す
-function trackPos(block, pos) {
+function channelPos(block, pos) {
   const i = pos - 1;
   let pc = block.pieces[0];
   for (const p of block.pieces) { if (p.from <= i) pc = p; else break; }
@@ -158,7 +158,7 @@ function trackPos(block, pos) {
 
 // mml.js のエラー（MMLError。文言を持たず code と位置だけ）を、エディタ上の行と文字位置つきの
 // 表示言語の文にする。文言は js/mml-messages.js、位置の書式は js/i18n.js が持つ。
-//   トラック2 3行目 5文字目: 解釈できない文字です: "%"
+//   チャンネル2 3行目 5文字目: 解釈できない文字です: "%"
 // mml.js 以外のエラー（作曲エンジン等、最初から日本語の message を持つもの）はそのまま返す
 function locateError(e, blocks) {
   if (!e.code) return e.message;
@@ -166,17 +166,17 @@ function locateError(e, blocks) {
   const b = (e.track === null || e.track === undefined) ? null : blocks[e.track];
   if (!b) return body;                                   // 曲全体のエラー（NO_NOTES）
   if (!(e.pos > 0)) return T('err.track', { track: e.track + 1, body });
-  const { line, col } = trackPos(b, e.pos);
+  const { line, col } = channelPos(b, e.pos);
   return T('err.at', { track: e.track + 1, line, col, body });
 }
 
 // エラー欄に出す。MMLの記法エラーなら原文の行と文字位置に直す
 function showError(e) {
-  error.textContent = locateError(e, parseTrackBlocks(ta.value));
+  error.textContent = locateError(e, parseChannelBlocks(ta.value));
 }
 
-function tracks() {
-  return parseTrackBlocks(ta.value).map(b => b.mml);
+function channels() {
+  return parseChannelBlocks(ta.value).map(b => b.mml);
 }
 
 // ── 記述の最適化 ────────────────────────────
@@ -184,7 +184,7 @@ function tracks() {
 // コメント空白化済みテキスト（原文と長さが同じ）の上でトークン化し、書き換えは原文の同じ
 // オフセットへ適用する。トークンには原文での位置を持たせる
 
-// 1トラック分（ranges = トラックに属する行の文字範囲）をトークン化する
+// 1チャンネル分（ranges = チャンネルに属する行の文字範囲）をトークン化する
 function optTokenize(s, ranges) {
   const toks = [];
   ranges.forEach(({ from, to }) => {
@@ -246,11 +246,11 @@ function optMatchBrackets(toks) {
 
 // リピートを展開しながら各トークン到達時の状態を記録する。
 //   oct/len  … 現在のオクターブ・デフォルト音長
-//   hasO/hasL … そのトラックで明示的な o / l が既に出ているか。まだなら暗黙の初期値（o4/l4）に
+//   hasO/hasL … そのチャンネルで明示的な o / l が既に出ているか。まだなら暗黙の初期値（o4/l4）に
 //               頼っていることになるので最適化しない（先頭の o / l は残す）
 // 周回ごとに状態が変わるトークン（例: [o5 c]2 の o5 は1周目o4基準・2周目o5基準）は 'x'（矛盾）とし、
 // 相対化・省略すると2周目以降が壊れるので書き換え対象から外す
-// assumeL = true は「トラックの頭に l4 を足した」と仮定した状態で走らせる（足す価値の見積り用）
+// assumeL = true は「チャンネルの頭に l4 を足した」と仮定した状態で走らせる（足す価値の見積り用）
 function optSimulate(toks, pair, assumeL) {
   const seen = new Array(toks.length).fill(null);
   const key = (s) => `${s.oct},${s.len},${s.hasO},${s.hasL}`;
@@ -283,7 +283,7 @@ function optSimulate(toks, pair, assumeL) {
   return seen;
 }
 
-// 検算用: トラックごとの音符列（時刻・長さ・音高）が完全に一致するか
+// 検算用: チャンネルごとの音符列（時刻・長さ・音高）が完全に一致するか
 function sameNotes(a, b) {
   if (a.length !== b.length) return false;
   return a.every((p, i) => {
@@ -299,7 +299,7 @@ function sameNotes(a, b) {
 document.getElementById('play').addEventListener('click', () => {
   error.textContent = '';
   try {
-    const info = playTracks(tracks());
+    const info = playChannels(channels());
     status.textContent = playStatusText(info);
   } catch (e) {
     status.textContent = '';
@@ -307,17 +307,17 @@ document.getElementById('play').addEventListener('click', () => {
   }
 });
 // [selFrom, selTo) を最適化した全文を返す（縮められなければ null）。
-// 状態はトラック先頭から追うので、範囲の手前にある l / o の影響もそのまま効く。
+// 状態はチャンネル先頭から追うので、範囲の手前にある l / o の影響もそのまま効く。
 // 書き換えは局所的に等価なものだけだが、最後に音符列が変わっていないことを検算する
 function optimizeMML(text, selFrom, selTo) {
-  const before = parseTrackBlocks(text).map(b => MMLPlayer.parse(b.mml));
+  const before = parseChannelBlocks(text).map(b => MMLPlayer.parse(b.mml));
   const stripped = stripComments(text);
   const lines = stripped.split('\n');
   const off = [];
   lines.reduce((a, l) => { off.push(a); return a + l.length + 1; }, 0);
   const edits = [];
   let nLen = 0, nOct = 0, nHead = 0;
-  parseTrackBlocks(text).forEach(b => {
+  parseChannelBlocks(text).forEach(b => {
     const ranges = [];
     for (let i = b.start; i <= b.end; i++) ranges.push({ from: off[i], to: off[i] + lines[i].length });
     const toks = optTokenize(stripped, ranges);
@@ -353,7 +353,7 @@ function optimizeMML(text, selFrom, selTo) {
     };
     // 明示の l が無い区間に4分音符（明示の 4 も、数字省略の暗黙の 4 も）があれば、頭に l4 を置いて
     // 明示にする。l4 は暗黙の初期値と同じ値なので音は変わらず、以降は数字を省ける。
-    // トラック先頭は必ず行頭=col 0 なので、ここへの挿入はトラック分割を壊さない
+    // チャンネル先頭は必ず行頭=col 0 なので、ここへの挿入はチャンネル分割を壊さない
     const seen = optSimulate(toks, pair, false);
     const head = ranges[0].from;
     const wantL4 = head >= selFrom && head < selTo && toks.some((tk, i) => {
@@ -372,7 +372,7 @@ function optimizeMML(text, selFrom, selTo) {
   edits.sort((x, y) => y.start - x.start || y.end - x.end);
   let out = text;
   edits.forEach(e => { out = out.slice(0, e.start) + e.text + out.slice(e.end); });
-  const after = parseTrackBlocks(out).map(b => MMLPlayer.parse(b.mml));
+  const after = parseChannelBlocks(out).map(b => MMLPlayer.parse(b.mml));
   if (!sameNotes(before, after)) throw new Error(T('opt.verifyFailed'));
   return { out, nLen, nOct, nHead };
 }
@@ -384,16 +384,16 @@ document.getElementById('optMml').addEventListener('click', () => {
   let selFrom = ta.selectionStart ?? 0, selTo = ta.selectionEnd ?? 0;
   if (selFrom === selTo) { selFrom = 0; selTo = text.length; }
   try {
-    tracks().forEach((m, i) => MMLPlayer.parse(m, i));
+    channels().forEach((m, i) => MMLPlayer.parse(m, i));
   } catch (e) {
-    error.textContent = T('opt.fixFirst') + locateError(e, parseTrackBlocks(text));
+    error.textContent = T('opt.fixFirst') + locateError(e, parseChannelBlocks(text));
     return;
   }
   let res;
   try {
     res = optimizeMML(text, selFrom, selTo);
   } catch (e) {
-    error.textContent = T('opt.aborted') + locateError(e, parseTrackBlocks(text));
+    error.textContent = T('opt.aborted') + locateError(e, parseChannelBlocks(text));
     return;
   }
   if (!res) { status.textContent = T('opt.nothing'); return; }
@@ -402,17 +402,17 @@ document.getElementById('optMml').addEventListener('click', () => {
 });
 // ── 小節チェック ────────────────────────────
 // 手書きMMLで一番多い事故は「1小節に入れる音符の数を間違える」こと。MMLとしては何も間違っていないので
-// パーサは黙って通し、再生してトラックがズレて初めて気づく。しかもどの小節が原因かは分からない。
-// ここでは (1)各トラックの尺が小節の整数倍か (2)全トラックで尺が揃っているか を判定し、
-// 崩れているトラックについては「何行目で小節線から外れ始めたか」を示す。
+// パーサは黙って通し、再生してチャンネルがズレて初めて気づく。しかもどの小節が原因かは分からない。
+// ここでは (1)各チャンネルの尺が小節の整数倍か (2)全チャンネルで尺が揃っているか を判定し、
+// 崩れているチャンネルについては「何行目で小節線から外れ始めたか」を示す。
 //
-// 行ごとの到達位置は、トラック先頭からその行までを丸ごと MMLPlayer.parse して求める。
+// 行ごとの到達位置は、チャンネル先頭からその行までを丸ごと MMLPlayer.parse して求める。
 // こうするとリピートの展開がパーサ任せになるので、[ ]2 や [ ]48 があっても正しく数えられる。
 // リピートの途中の行は [ が閉じていなくてパースできないので、開いたままの [ の数だけ ]1
 // （1回だけ繰り返す＝中身そのまま）を仮に足して閉じる。こうすると [ ]0 で本体を丸ごと括った
 // 曲でも、中の行が全部スキップされずに位置を測れる。
 function barCheck(beatsPerBar) {
-  const trks = parseTrackBlocks(ta.value);
+  const chs = parseChannelBlocks(ta.value);
   const whole = (x) => Math.abs(x - Math.round(x)) < 1e-6;
   // 途中までのMMLを測る。リピートの途中なら開いたままの [ の数だけ ]1 を足して閉じる
   const partial = (src) => {
@@ -420,22 +420,22 @@ function barCheck(beatsPerBar) {
     for (const c of src) { if (c === '[') open++; else if (c === ']') open--; }
     return MMLPlayer.parse(src + ']1'.repeat(Math.max(0, open)));
   };
-  // 曲の長さとループ開始点は mml.js の _parse と同じ決め方にする。無限ループ [ ]0 のトラックは
+  // 曲の長さとループ開始点は mml.js の _parse と同じ決め方にする。無限ループ [ ]0 のチャンネルは
   // 本体が曲末まで敷き詰められて鳴るので、「書いた長さ」ではなく「敷き詰めた後に鳴る長さ」で
   // 判定しないと同尺を誤る（gggggggg と [c] は同じだけ鳴るのに「長さが違う」と言ってしまう）
-  const parsed = trks.map((tr, ti) => MMLPlayer.parse(tr.mml, ti));
+  const parsed = chs.map((tr, ti) => MMLPlayer.parse(tr.mml, ti));
   const songDur = parsed.reduce((d, q) => Math.max(d, q.duration), 0);
   const songLoop = parsed.reduce((x, q) => (q.loopStart === null ? x : Math.max(x, q.loopStart)), 0);
   const rows = [];
   let allSame = true;
 
-  trks.forEach((tr, ti) => {
+  chs.forEach((tr, ti) => {
     const mml = tr.mml;
     const p = parsed[ti];
     const played = p.loopStart === null ? p.duration : songDur;   // 実際に鳴る長さ
     if (Math.abs(played - songDur) > 1e-6) allSame = false;
 
-    // parse が返す tempo は「最後に設定された値」なので、途中でテンポが変わるトラックでは
+    // parse が返す tempo は「最後に設定された値」なので、途中でテンポが変わるチャンネルでは
     // 小節長を1つに決められない。誤った数字を出すより判定不能と言うほうがいい。
     // 最初の t より前に音符・休符があれば、そこは既定の t120 で鳴っているので 120 も数える
     const tempos = [...new Set((mml.match(/t\d+/gi) || []).map(s => parseInt(s.slice(1), 10)))];
@@ -532,7 +532,7 @@ document.getElementById('checkBars').addEventListener('click', () => {
     r = barCheck(beats);
   } catch (e) {
     rep.textContent = '';
-    error.textContent = T('bar.fixFirst') + locateError(e, parseTrackBlocks(ta.value));
+    error.textContent = T('bar.fixFirst') + locateError(e, parseChannelBlocks(ta.value));
     return;
   }
   if (!r.rows.length) { rep.textContent = ''; status.textContent = T('bar.noTracks'); return; }
@@ -541,22 +541,22 @@ document.getElementById('checkBars').addEventListener('click', () => {
   status.textContent = out.status;
 });
 
-// mml.js に渡せる形（コメント除去済み・1行=1トラック）でクリップボードへ。
+// mml.js に渡せる形（コメント除去済み・1行=1チャンネル）でクリップボードへ。
 // mml.js が読み飛ばすのは空白・タブ・改行・| だけなので、エディタ側の記法（コメント・継続行）は
 // ここで潰しておく必要がある
 document.getElementById('copyMml').addEventListener('click', () => {
   error.textContent = '';
-  const trks = tracks();
-  if (!trks.length) { status.textContent = T('copy.noTracks'); return; }
+  const chs = channels();
+  if (!chs.length) { status.textContent = T('copy.noTracks'); return; }
   const el = document.createElement('textarea');
-  el.value = trks.join('\n') + '\n';
+  el.value = chs.join('\n') + '\n';
   el.style.position = 'fixed';
   el.style.opacity = '0';
   document.body.appendChild(el);
   el.select();
   document.execCommand('copy');
   document.body.removeChild(el);
-  status.textContent = T('copy.done', { n: trks.length });
+  status.textContent = T('copy.done', { n: chs.length });
 });
 document.getElementById('stop').addEventListener('click', () => {
   MMLPlayer.stop();

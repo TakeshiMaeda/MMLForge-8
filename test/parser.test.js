@@ -4,11 +4,11 @@ const { loadPlayer, ok, eq, near } = require('./helper');
 const P = loadPlayer();
 
 // 内部のイベント（segs / lfo / porta / bend）まで見たいものは、
-// mml.js を書き換えずにテスト時だけ _parseTrack を露出させて確かめる
+// mml.js を書き換えずにテスト時だけ _parseChannel を露出させて確かめる
 const { read } = require('./helper');
 const raw = read('mml.js');
 // 公開オブジェクトの中の MMLError の行の前に足す（並び順には依存しない）
-const patched = raw.replace(/\n([ \t]*)MMLError,/, (m, ind) => `\n${ind}_pt: _parseTrack,\n${ind}MMLError,`);
+const patched = raw.replace(/\n([ \t]*)MMLError,/, (m, ind) => `\n${ind}_pt: _parseChannel,\n${ind}MMLError,`);
 if (patched === raw) throw new Error('mml.js の return ブロックの形が変わりました（テストの読み込み方を直してください）');
 const Inner = eval(patched + ';MMLPlayer');   // eslint-disable-line no-eval
 const ev = (s) => Inner._pt(s, 0);
@@ -106,7 +106,7 @@ module.exports = {
     eq(r.evs.length, 1, '発音は1回');
     near(r.evs[0].dur, 1.0, '長さは合算');
     eq(r.evs[0].segs.length, 2, '音程の区間は2つ');
-    near(r.dur, 1.0, 'トラック長は変わらない');
+    near(r.dur, 1.0, 'チャンネル長は変わらない');
   },
   'スラーは区間ごとに音程が変わる'() {
     eq(ev('o4 c4&e4').evs[0].segs.map(s => s.midi), [60, 64]);

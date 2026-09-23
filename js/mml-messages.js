@@ -24,7 +24,7 @@ const MML_MSG = {
 
     UNMATCHED_OPEN:  () => '[ に対応する ] がありません',
     UNMATCHED_CLOSE: () => '] に対応する [ がありません',
-    LOOP_NOT_LAST:   () => '無限ループ（数字なし・0 の [ ]）はトラックの末尾にのみ書けます（リピートの中も不可）',
+    LOOP_NOT_LAST:   () => '無限ループ（数字なし・0 の [ ]）はチャンネルの末尾にのみ書けます（リピートの中も不可）',
     LOOP_EMPTY:      () => '無限ループの中身には音符か休符が必要です',
 
     O_RANGE:    () => 'o の後にオクターブ数(0-8)が必要です',
@@ -59,7 +59,7 @@ const MML_MSG = {
 
     UNMATCHED_OPEN:  () => '[ has no matching ]',
     UNMATCHED_CLOSE: () => '] has no matching [',
-    LOOP_NOT_LAST:   () => 'An infinite loop ([ ] with no count or 0) can only be at the end of a track (not inside a repeat)',
+    LOOP_NOT_LAST:   () => 'An infinite loop ([ ] with no count or 0) can only be at the end of a channel (not inside a repeat)',
     LOOP_EMPTY:      () => 'An infinite loop needs at least one note or rest',
 
     O_RANGE:    () => 'o needs an octave number (0-8)',

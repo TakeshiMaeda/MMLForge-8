@@ -9,7 +9,7 @@ const { ROOT, loadPlayer, loadCore, ok, eq, near } = require('./helper');
 
 const P = loadPlayer();
 global.MMLPlayer = P;
-const { barCheck, parseTrackBlocks, ta } = loadCore(P);
+const { barCheck, parseChannelBlocks, ta } = loadCore(P);
 
 const song = (name) => fs.readFileSync(path.join(ROOT, 'songs', name), 'utf8');
 const check = (name, beats) => { ta.value = song(name); return barCheck(beats); };
@@ -21,22 +21,22 @@ module.exports = {
     ok(files.length > 0, 'songs/ に曲がある');
     for (const f of files) {
       ta.value = song(f);
-      // barCheck は内部で全トラックを parse するので、通れば記法エラーは無い
+      // barCheck は内部で全チャンネルを parse するので、通れば記法エラーは無い
       const r = barCheck(4);
-      ok(r.rows.length > 0, `${f}: トラックが取れる`);
+      ok(r.rows.length > 0, `${f}: チャンネルが取れる`);
     }
   },
 
-  'elven-morning: 6トラック・152小節・全トラック同尺'() {
+  'elven-morning: 6チャンネル・152小節・全チャンネル同尺'() {
     const r = check('elven-morning.mml', 3);   // 6/8 = 4分3つ
-    eq(r.rows.length, 6, 'トラック数');
-    ok(r.allSame, '全トラック同尺');
+    eq(r.rows.length, 6, 'チャンネル数');
+    ok(r.allSame, '全チャンネル同尺');
     r.rows.forEach(x => near(x.bars, 152, `ch${x.ch} の小節数`, 1e-6));
     r.rows.forEach(x => eq(x.tempo, 175, `ch${x.ch} のテンポ`));
   },
 
   'elven-morning: エコー(ch6)はハープ(ch3)を32分ずらした複製'() {
-    const blocks = parseTrackBlocks(song('elven-morning.mml'));
+    const blocks = parseChannelBlocks(song('elven-morning.mml'));
     const harp = P.parse(blocks[2].mml).notes;
     const echo = P.parse(blocks[5].mml).notes;
     eq(echo.length, harp.length, '音数は同じ');
@@ -54,7 +54,7 @@ module.exports = {
   },
 
   'elven-morning: 前奏の後にループ開始点がある'() {
-    const blocks = parseTrackBlocks(song('elven-morning.mml'));
+    const blocks = parseChannelBlocks(song('elven-morning.mml'));
     const bar = 3 * 60 / 175;
     blocks.forEach((b, i) => {
       const p = P.parse(b.mml);
@@ -63,10 +63,10 @@ module.exports = {
     });
   },
 
-  'slow-blues-in-a: 6トラック・12小節・全トラック同尺'() {
+  'slow-blues-in-a: 6チャンネル・12小節・全チャンネル同尺'() {
     const r = check('slow-blues-in-a.mml', 4);
-    eq(r.rows.length, 6, 'トラック数');
-    ok(r.allSame, '全トラック同尺');
+    eq(r.rows.length, 6, 'チャンネル数');
+    ok(r.allSame, '全チャンネル同尺');
     r.rows.forEach(x => near(x.bars, 12, `ch${x.ch} の小節数`, 1e-6));
     r.rows.forEach(x => eq(x.tempo, 60, `ch${x.ch} のテンポ`));
     r.rows.forEach(x => eq(x.strays, 0, `ch${x.ch} は全部小節線に乗る`));

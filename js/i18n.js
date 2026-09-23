@@ -55,15 +55,15 @@ const TEXT = {
     'common.warn':     p => ` ※${p.msg}`,
 
     // ── エラー位置（core.js の locateError） ──
-    'err.at':    p => `トラック${p.track} ${p.line}行目 ${p.col}文字目: ${p.body}`,
-    'err.track': p => `トラック${p.track}: ${p.body}`,
+    'err.at':    p => `チャンネル${p.track} ${p.line}行目 ${p.col}文字目: ${p.body}`,
+    'err.track': p => `チャンネル${p.track}: ${p.body}`,
 
     // ── 試聴プレイヤー（core.js） ──
-    'sample.comment':   '; サンプル: きらきら星（行頭から始まる行=新トラック、行頭に空白=前のトラックの続き）',
+    'sample.comment':   '; サンプル: きらきら星（行頭から始まる行=新チャンネル、行頭に空白=前のチャンネルの続き）',
     'play.status':      p => `再生中 (1ループ ${p.loop} 秒)`,
     'play.statusIntro': p => `再生中 (イントロ ${p.intro} 秒 + 1ループ ${p.loop} 秒)`,
-    'copy.noTracks':    'コピーするトラックがありません',
-    'copy.done':        p => `mml.js用に整形してコピーしました（${p.n}トラック）`,
+    'copy.noTracks':    'コピーするチャンネルがありません',
+    'copy.done':        p => `mml.js用に整形してコピーしました（${p.n}チャンネル）`,
 
     // ── 記述の最適化（core.js） ──
     'opt.unbalanced':   '[ ] の対応が取れません',
@@ -72,11 +72,11 @@ const TEXT = {
     'opt.fixFirst':     '最適化の前にMMLのエラーを直してください — ',
     'opt.aborted':      '最適化を中止しました（内容は変えていません） — ',
     'opt.nothing':      '縮められる記述はありませんでした',
-    'opt.done':         p => `最適化しました（音長${p.len}箇所・オクターブ${p.oct}箇所` + (p.head ? `・l4追加${p.head}トラック）` : '）'),
+    'opt.done':         p => `最適化しました（音長${p.len}箇所・オクターブ${p.oct}箇所` + (p.head ? `・l4追加${p.head}チャンネル）` : '）'),
 
     // ── 小節チェック（core.js） ──
     'bar.fixFirst':   '小節チェックの前にMMLのエラーを直してください — ',
-    'bar.noTracks':   'チェックするトラックがありません',
+    'bar.noTracks':   'チェックするチャンネルがありません',
     'bar.header':     p => `1小節 = ${p.beats}拍 として判定`,
     'bar.row':        p => `ch${p.ch}  ${p.bars}小節  t${p.tempo}  ${p.notes}音`,
     'bar.rowSec':     p => `ch${p.ch}  ${p.sec}秒  ${p.notes}音`,
@@ -85,8 +85,8 @@ const TEXT = {
     'bar.notWhole':   '  ← 小節の整数倍になっていません',
     'bar.where':      p => `${p.no}行目` + (p.part ? `の${p.part}つ目` : ''),
     'bar.strays':     p => `  小節線に乗らない箇所 ${p.n}件（最初は${p.where}・${p.bars}小節の位置）`,
-    'bar.sameOk':     '全トラック同尺: OK',
-    'bar.sameNg':     '全トラック同尺: NG ← トラックごとに長さが違います',
+    'bar.sameOk':     '全チャンネル同尺: OK',
+    'bar.sameNg':     '全チャンネル同尺: NG ← チャンネルごとに長さが違います',
     'bar.statusOk':   '小節チェック: 問題なし',
     'bar.statusNg':   '小節チェック: 要確認',
 
@@ -152,7 +152,7 @@ const TEXT = {
     'drum.noHits':         '打点がありません',
     'drum.playing':        'パターン再生中',
     'drum.cleared':        'クリアしました',
-    'drum.inserted':       '本編末尾にトラックを追加しました',
+    'drum.inserted':       '本編末尾にチャンネルを追加しました',
 
     // ── ワークスペースのウインドウ（desk.js） ──
     'desk.help':  '説明を表示／隠す',
@@ -168,15 +168,15 @@ const TEXT = {
     'common.warn':     p => ` (note: ${p.msg})`,
 
     // ── エラー位置 ──
-    'err.at':    p => `Track ${p.track}, line ${p.line}, col ${p.col}: ${p.body}`,
-    'err.track': p => `Track ${p.track}: ${p.body}`,
+    'err.at':    p => `Channel ${p.track}, line ${p.line}, col ${p.col}: ${p.body}`,
+    'err.track': p => `Channel ${p.track}: ${p.body}`,
 
     // ── 試聴プレイヤー ──
-    'sample.comment':   '; Sample: Twinkle Twinkle Little Star (a line starting at the left edge = new track; a line starting with a space continues the track above)',
+    'sample.comment':   '; Sample: Twinkle Twinkle Little Star (a line starting at the left edge = new channel; a line starting with a space continues the channel above)',
     'play.status':      p => `Playing (loop ${p.loop}s)`,
     'play.statusIntro': p => `Playing (intro ${p.intro}s + loop ${p.loop}s)`,
-    'copy.noTracks':    'No tracks to copy',
-    'copy.done':        p => `Copied in mml.js format (${p.n} tracks)`,
+    'copy.noTracks':    'No channels to copy',
+    'copy.done':        p => `Copied in mml.js format (${p.n} channels)`,
 
     // ── 記述の最適化 ──
     'opt.unbalanced':   '[ and ] do not match',
@@ -185,11 +185,11 @@ const TEXT = {
     'opt.fixFirst':     'Fix the MML errors before optimizing — ',
     'opt.aborted':      'Optimization cancelled (nothing was changed) — ',
     'opt.nothing':      'Nothing to shorten',
-    'opt.done':         p => `Optimized (${p.len} lengths, ${p.oct} octaves` + (p.head ? `, l4 added to ${p.head} tracks)` : ')'),
+    'opt.done':         p => `Optimized (${p.len} lengths, ${p.oct} octaves` + (p.head ? `, l4 added to ${p.head} channels)` : ')'),
 
     // ── 小節チェック ──
     'bar.fixFirst':   'Fix the MML errors before checking bars — ',
-    'bar.noTracks':   'No tracks to check',
+    'bar.noTracks':   'No channels to check',
     'bar.header':     p => `Checking with ${p.beats} beats per bar`,
     'bar.row':        p => `ch${p.ch}  ${p.bars} bars  t${p.tempo}  ${p.notes} notes`,
     'bar.rowSec':     p => `ch${p.ch}  ${p.sec}s  ${p.notes} notes`,
@@ -198,8 +198,8 @@ const TEXT = {
     'bar.notWhole':   '  ← not a whole number of bars',
     'bar.where':      p => `line ${p.no}` + (p.part ? `, segment ${p.part}` : ''),
     'bar.strays':     p => `  ${p.n} spot(s) off the bar lines (first: ${p.where}, at bar ${p.bars})`,
-    'bar.sameOk':     'All tracks same length: OK',
-    'bar.sameNg':     'All tracks same length: NG ← the tracks differ in length',
+    'bar.sameOk':     'All channels same length: OK',
+    'bar.sameNg':     'All channels same length: NG ← the channels differ in length',
     'bar.statusOk':   'Bar check: OK',
     'bar.statusNg':   'Bar check: needs attention',
 
@@ -265,7 +265,7 @@ const TEXT = {
     'drum.noHits':         'No hits',
     'drum.playing':        'Playing the pattern',
     'drum.cleared':        'Cleared',
-    'drum.inserted':       'Added the tracks to the end of the main text',
+    'drum.inserted':       'Added the channels to the end of the main text',
 
     // ── ワークスペースのウインドウ ──
     'desk.help':  'Show or hide help',

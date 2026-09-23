@@ -3,7 +3,7 @@
 // mml.js は文言を持たない（言語非依存）。投げるのは MMLError で、外向きの約束は
 //   code   … エラーの種類を表す識別子。文言はエディタ側（js/mml-messages.js）が持つ
 //   params … 文言に埋める値（{ char } { max } { label }）。MMLの記号や数値だけで言語に依らない
-//   track  … 0始まりのトラック番号。曲全体のエラー（NO_NOTES）は null
+//   track  … 0始まりのチャンネル番号。曲全体のエラー（NO_NOTES）は null
 //   pos    … 1始まりの「原文」の文字位置。リピート [ ]n の後ろでも展開後の位置にはならない
 // の4つ。ここではその4つを押さえる（日本語の文言は test/messages.test.js が見る）。
 // mml.js の throw 箇所を網羅する（増やしたらここも増やすこと）。
@@ -29,7 +29,7 @@ module.exports = {
     ok(e, '例外が投げられる');
     eq(e.name, 'MMLError');
     eq(e.code, 'BAD_CHAR');
-    eq(e.track, 0, 'track はトラックのインデックス（0始まり）');
+    eq(e.track, 0, 'track はチャンネルのインデックス（0始まり）');
     eq(e.pos, 4, 'pos は原文の文字位置（1始まり）');
     eq(e.message, 'BAD_CHAR', 'message は言語非依存にするためコードそのもの');
     ok(e instanceof Error, 'Error のサブクラス');
@@ -166,7 +166,7 @@ module.exports = {
   '& の後が休符'() {
     throwsCode(parse('c4&r4'), { code: 'TIE_REST', pos: 4 });
   },
-  '& でトラックが終わる（& の位置を指す）'() {
+  '& でチャンネルが終わる（& の位置を指す）'() {
     throwsCode(parse('c4&'), { code: 'TIE_NO_NEXT', pos: 3 });
   },
   '& の後にコマンドだけ続いて音符が無い'() {
@@ -198,21 +198,21 @@ module.exports = {
     eq(P.parse('[[r]1000]1000').notes.length, 0);
   },
 
-  // ── トラック番号 ──
-  'track はエラーの起きたトラックを指す'() {
-    // parse() は単トラック用なので既定は0。第2引数で番号を渡せる
+  // ── チャンネル番号 ──
+  'track はエラーの起きたチャンネルを指す'() {
+    // parse() は単チャンネル用なので既定は0。第2引数で番号を渡せる
     throwsCode(parse('%'), { code: 'BAD_CHAR', track: 0 });
     throwsCode(() => P.parse('%', 3), { code: 'BAD_CHAR', track: 3 });
   },
 
   // ── play() 固有（パースは再生の前に済むので AudioContext 無しで確かめられる） ──
-  '空のトラックしか無ければ play() は拒否する'() {
+  '空のチャンネルしか無ければ play() は拒否する'() {
     // 曲全体のエラーなので track も pos も無い
     throwsCode(() => P.play(''), { code: 'NO_NOTES', track: null, pos: null });
     throwsCode(() => P.play([]), { code: 'NO_NOTES' });
     throwsCode(() => P.play(['', ' | ']), { code: 'NO_NOTES' });
   },
-  'play() のエラーは何トラック目かを示す'() {
+  'play() のエラーは何チャンネル目かを示す'() {
     throwsCode(() => P.play(['cde', 'c %']), { code: 'BAD_CHAR', track: 1, pos: 3 });
   },
 };

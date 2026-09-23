@@ -6,7 +6,7 @@ const { loadPlayer, loadCore, ok, eq, near } = require('./helper');
 const P = loadPlayer();
 global.MMLPlayer = P;
 const core = loadCore(P);
-const { stripComments, parseTrackBlocks, trackPos, locateError, barCheck, ta } = core;
+const { stripComments, parseChannelBlocks, channelPos, locateError, barCheck, ta } = core;
 
 const check = (text, beats) => { ta.value = text; return barCheck(beats); };
 
@@ -32,21 +32,21 @@ module.exports = {
     eq(stripComments(src).length, src.length);
   },
 
-  // ── トラック分割 ──
-  '行頭から始まる行が新トラック'() {
-    eq(parseTrackBlocks('t120 c\nt120 d').map(b => b.mml), ['t120 c', 't120 d']);
+  // ── チャンネル分割 ──
+  '行頭から始まる行が新チャンネル'() {
+    eq(parseChannelBlocks('t120 c\nt120 d').map(b => b.mml), ['t120 c', 't120 d']);
   },
-  '行頭が空白の行は前のトラックの続き'() {
-    eq(parseTrackBlocks('t120 c\n  d e').map(b => b.mml), ['t120 c d e']);
+  '行頭が空白の行は前のチャンネルの続き'() {
+    eq(parseChannelBlocks('t120 c\n  d e').map(b => b.mml), ['t120 c d e']);
   },
-  '空行とコメントだけの行はトラックを分断しない'() {
-    const b = parseTrackBlocks('t120 c\n; メモ\n\n  d');
-    eq(b.length, 1, 'トラックは1つのまま');
+  '空行とコメントだけの行はチャンネルを分断しない'() {
+    const b = parseChannelBlocks('t120 c\n; メモ\n\n  d');
+    eq(b.length, 1, 'チャンネルは1つのまま');
     eq(b[0].mml, 't120 c d');
   },
 
   'ブロックは属する行の番号(1始まり)と内容を持つ'() {
-    const b = parseTrackBlocks('t120 c\n; メモ\n\n  d ; x\nt120 e');
+    const b = parseChannelBlocks('t120 c\n; メモ\n\n  d ; x\nt120 e');
     eq(b[0].lines, [{ no: 1, text: 't120 c' }, { no: 4, text: 'd' }], 'コメントと空行は除かれる');
     eq(b[1].lines, [{ no: 5, text: 't120 e' }]);
     eq([b[0].start, b[0].end], [0, 3], 'start/end は0始まりの行インデックス');
@@ -54,46 +54,46 @@ module.exports = {
 
   // ── エラー位置を原文の行と文字位置に直す ──
   '連結後の位置を元の行と文字位置に戻せる'() {
-    const b = parseTrackBlocks('t120 c\n  d %')[0];   // 連結後は "t120 c d %"（% は10文字目）
-    eq(trackPos(b, 10), { line: 2, col: 5 }, '2行目の5文字目（行頭の空白も数える）');
-    eq(trackPos(b, 1), { line: 1, col: 1 });
-    eq(trackPos(b, 8), { line: 2, col: 3 }, 'd は2行目3文字目');
+    const b = parseChannelBlocks('t120 c\n  d %')[0];   // 連結後は "t120 c d %"（% は10文字目）
+    eq(channelPos(b, 10), { line: 2, col: 5 }, '2行目の5文字目（行頭の空白も数える）');
+    eq(channelPos(b, 1), { line: 1, col: 1 });
+    eq(channelPos(b, 8), { line: 2, col: 3 }, 'd は2行目3文字目');
   },
   'コメントを挟んでも行と文字位置は原文のまま'() {
     // 3行目 "  d /* x */ %" の % は13文字目（コメントを空白化しても桁は動かない）
-    const b = parseTrackBlocks('/* a */ t120 c\n; memo\n  d /* x */ %')[0];
-    eq(trackPos(b, b.mml.indexOf('%') + 1), { line: 3, col: 13 });
+    const b = parseChannelBlocks('/* a */ t120 c\n; memo\n  d /* x */ %')[0];
+    eq(channelPos(b, b.mml.indexOf('%') + 1), { line: 3, col: 13 });
   },
-  'mml.js のエラーを「トラックN L行目 C文字目」に直す'() {
+  'mml.js のエラーを「チャンネルN L行目 C文字目」に直す'() {
     const text = 't120 c\nt120 d\n  e %';
-    const blocks = parseTrackBlocks(text);
+    const blocks = parseChannelBlocks(text);
     let e = null;
     try { P.play(blocks.map(b => b.mml)); } catch (err) { e = err; }
     ok(e, 'エラーになる');
     eq(e.message, 'BAD_CHAR', 'mml.js 側は文言を持たない');
-    eq(locateError(e, blocks), 'トラック2 3行目 5文字目: 解釈できない文字です: "%"');
+    eq(locateError(e, blocks), 'チャンネル2 3行目 5文字目: 解釈できない文字です: "%"');
   },
-  '曲全体のエラー（位置なし）はトラック番号を付けない'() {
-    const blocks = parseTrackBlocks('');
+  '曲全体のエラー（位置なし）はチャンネル番号を付けない'() {
+    const blocks = parseChannelBlocks('');
     let e = null;
     try { P.play(''); } catch (err) { e = err; }
     eq(e.code, 'NO_NOTES');
     eq(locateError(e, blocks), '演奏する音符がありません');
   },
   '文言表に無いコードでも位置は付く'() {
-    const blocks = parseTrackBlocks('t120 c\n  d %');
+    const blocks = parseChannelBlocks('t120 c\n  d %');
     eq(locateError({ code: 'NOPE', params: {}, track: 0, pos: 10 }, blocks),
-      'トラック1 2行目 5文字目: 不明なエラー (NOPE)');
+      'チャンネル1 2行目 5文字目: 不明なエラー (NOPE)');
   },
   '英語表示ではエラー位置も英語で書く'() {
     const en = loadCore(P, { language: 'en-US' });
-    const blocks = en.parseTrackBlocks('t120 c\nt120 d\n  e %');
+    const blocks = en.parseChannelBlocks('t120 c\nt120 d\n  e %');
     let e = null;
     try { P.play(blocks.map(b => b.mml)); } catch (err) { e = err; }
-    eq(en.locateError(e, blocks), 'Track 2, line 3, col 5: Unexpected character: "%"');
+    eq(en.locateError(e, blocks), 'Channel 2, line 3, col 5: Unexpected character: "%"');
   },
   'mml.js 以外のエラーは message をそのまま返す'() {
-    eq(locateError(new Error('メロディに音符がありません'), parseTrackBlocks('c')),
+    eq(locateError(new Error('メロディに音符がありません'), parseChannelBlocks('c')),
       'メロディに音符がありません');
   },
 
@@ -127,7 +127,7 @@ module.exports = {
   },
   // ── 無限ループ [ ]0 は再生時に曲末まで敷き詰められる（mml.js の _parse）ので、
   //    小節チェックも「敷き詰めた後に鳴る長さ」で判定する ──
-  '無限ループのトラックは曲末まで敷き詰められるので同尺と判定される'() {
+  '無限ループのチャンネルは曲末まで敷き詰められるので同尺と判定される'() {
     // ch1 は2小節。ch2 は音符1つだが、曲末まで8回敷き詰められて同じ2小節ぶん鳴る
     const r = check('t120 l4 gggggggg\n\nt120 l4 [c]', 4);
     eq(r.rows[0].bars, 2);
@@ -137,7 +137,7 @@ module.exports = {
   },
   'ループ本体の長さと繰り返し回数を報告する'() {
     const r = check('t120 l4 gggggggg\n\nt120 l4 [c]', 4);
-    eq(r.rows[0].loop, null, '無限ループを使わないトラックは loop 情報なし');
+    eq(r.rows[0].loop, null, '無限ループを使わないチャンネルは loop 情報なし');
     near(r.rows[1].loop.bodyBars, 0.25, 'ループ本体は0.25小節');
     near(r.rows[1].loop.times, 8, '8回で曲末まで埋まる');
     ok(r.rows[1].loop.fit, 'ちょうど割り切れる');
@@ -171,7 +171,7 @@ module.exports = {
   '報告: 問題なければ小節数と同尺OKを並べる'() {
     const r = check('t120 l4 c d e f | g a b >c\nt120 l4 o3 c2 g2 | c2 g2', 4);
     const out = core.barReport(r, 4);
-    eq(out.html, '1小節 = 4拍 として判定\nch1  2.000小節  t120  8音\nch2  2.000小節  t120  4音\n全トラック同尺: OK');
+    eq(out.html, '1小節 = 4拍 として判定\nch1  2.000小節  t120  8音\nch2  2.000小節  t120  4音\n全チャンネル同尺: OK');
     eq(out.status, '小節チェック: 問題なし');
   },
   '報告: 無限ループは前奏と本体の内訳を添え、割り切れなければ「曲末で途中まで」'() {
@@ -183,7 +183,7 @@ module.exports = {
     const r = check('t120 l4 c d e f | g a b\nt120 l4 o3 c2 g2 | c2 g2', 4);
     const out = core.barReport(r, 4);
     ok(out.html.includes('<span class="ng">  ← 小節の整数倍になっていません</span>'));
-    ok(out.html.includes('<span class="ng">全トラック同尺: NG ← トラックごとに長さが違います</span>'));
+    ok(out.html.includes('<span class="ng">全チャンネル同尺: NG ← チャンネルごとに長さが違います</span>'));
     eq(out.status, '小節チェック: 要確認');
   },
   '報告: 英語表示では英語で書く'() {
@@ -195,7 +195,7 @@ module.exports = {
       'ch1  2.000 bars  t120  8 notes',
       'ch2  2.000 bars  t120  8 notes',
       '     1 spot(s) off the bar lines (first: line 2, segment 1, at bar 1.031)',
-      'All tracks same length: OK',
+      'All channels same length: OK',
     ]);
     eq(out.status, 'Bar check: OK');
   },
@@ -205,11 +205,11 @@ module.exports = {
     near(r.rows[0].bars, 2);
     ok(r.rows[0].ok);
   },
-  'トラックごとに長さが違えば同尺NG'() {
+  'チャンネルごとに長さが違えば同尺NG'() {
     const r = check('t120 l4 c d e f\nt120 l4 c d e f g a', 4);
     ok(!r.allSame);
   },
-  'テンポが変わるトラックは判定不能として報告する'() {
+  'テンポが変わるチャンネルは判定不能として報告する'() {
     // 小節長を1つに決められないので、誤った小節数を出すより判定不能と言う
     const r = check('t120 l4 c d e f t60 g a b >c', 4);
     eq(r.rows[0].multiTempo, [120, 60], '見つかったテンポを列挙する');
@@ -221,7 +221,7 @@ module.exports = {
     ok(!r.rows[0].multiTempo);
     eq(r.rows[0].bars, 2);
   },
-  '最初の音符より後で初めて t が出るトラックは、それまで既定の t120 なので複数テンポ扱い'() {
+  '最初の音符より後で初めて t が出るチャンネルは、それまで既定の t120 なので複数テンポ扱い'() {
     // 前半は既定の120、後半は60。t60 だけ見て「1.5小節」と出すのは誤り
     const r = check('l4 c d e f t60 g a b >c', 4);
     eq(r.rows[0].multiTempo, [120, 60]);
@@ -232,8 +232,8 @@ module.exports = {
     eq(r.rows[0].tempo, 60);
     eq(r.rows[0].bars, 1);
   },
-  '意図的に小節線をまたぐトラックは件数として報告される'() {
-    // エコー用に頭を32分ずらし、末尾の音を同じだけ詰めて尺を合わせたトラック。
+  '意図的に小節線をまたぐチャンネルは件数として報告される'() {
+    // エコー用に頭を32分ずらし、末尾の音を同じだけ詰めて尺を合わせたチャンネル。
     // l4 では 4分=1拍・32分=0.125拍なので、最後の音は 1-0.125=0.875拍 ＝ 複付点8分（8..）。
     // ズレは途中の小節線でしか観測できないので、2小節にして | で区切っておく
     const r = check('t120 l4 c d e f | c d e f\nt120 l4 r32 c d e f | c d e f8..', 4);
